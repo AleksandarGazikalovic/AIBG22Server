@@ -49,7 +49,7 @@ public class Configuration {
 
         while((line = br.readLine()) != null) {
             //Parsira liniju konfiguracionog file-a
-            String[] keyValuePair = line.split(":");
+            String[] keyValuePair = line.split(": ");
             String key = keyValuePair[0];
             String value = keyValuePair[1];
 
