@@ -1,5 +1,5 @@
-usernames:admin,player1
-passwords:admin,player1
-types:A,P
-noOfPlayers:2
-logicAddress:http://ip:port/logic
+usernames: admin,player1
+passwords: admin,player1
+types: A,P
+noOfPlayers: 2
+logicAddress: http://ip:port/logic
