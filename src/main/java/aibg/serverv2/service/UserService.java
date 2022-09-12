@@ -15,5 +15,5 @@ public interface UserService {
     List<User> getUsers();
 
     //Dodaje igrače na konkretnu sesiju, i zadaje im index-e.
-    List<Player> addPlayers(List<String> usernames);
+    List<Player> addPlayers(List<String> usernames, int gameId);
 }

@@ -36,6 +36,9 @@ public class TokenServiceImplementation implements TokenService {
     @Override
     public Claims parseToken(String jwt) {
         Claims claims;
+        if(jwt.startsWith("Bearer")) {
+            jwt=jwt.split(" ")[1];
+        }
         try{
             claims = Jwts.parser()
                     .setSigningKey(key)
@@ -47,6 +50,7 @@ public class TokenServiceImplementation implements TokenService {
         }
         if(claims == null){
             LOG.info("Nije moguće generisati Claims objekat");
+            return null;
         }
         return claims;
     }

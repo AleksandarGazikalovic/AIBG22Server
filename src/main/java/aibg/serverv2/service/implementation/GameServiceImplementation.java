@@ -66,7 +66,7 @@ public class GameServiceImplementation implements GameService {
         game.setGameState(gameState);
 
         //Dodaje igrače u igru, postavlja im index-e.
-        List<Player> players = userService.addPlayers(dto.getPlayerUsernames());
+        List<Player> players = userService.addPlayers(dto.getPlayerUsernames(),dto.getGameId());
         if (players == null) {
             return new ErrorResponseDTO("Greška pri dodavanju igrača u igru.");
         }
@@ -81,8 +81,14 @@ public class GameServiceImplementation implements GameService {
 
     //Kači odredjenog igrača na odredjenu sesiju.
     @Override
-    public DTO joinGame(JoinGameRequestDTO dto, String token) {
+    public DTO joinGame(String token) {
         Claims claims = tokenService.parseToken(token);
+        //Proverava da li je token parsiran
+        if(token==null) {
+            LOG.info("Token nije parsiran kako treba.");
+            return new ErrorResponseDTO("Token nije parsiran kako treba.");
+        }
+
         //Dohvata usera koji je poslao zahtev.
         Player player = null;
         for (User u : userService.getUsers()) {
@@ -98,12 +104,12 @@ public class GameServiceImplementation implements GameService {
         }
 
         //Dohvata Game na koji igrač pokušava da se prikači.
-        Game game = games.get(dto.getGameId());
+        Game game = games.get(player.getCurrGameId());
 
         //Proverava da li postoji Game sa datim ID-om.
         if (game == null) {
             LOG.info("Pokušano da se prikači na nepostojeću igru.");
-            return new ErrorResponseDTO("Igra sa id: " + dto.getGameId() + " ne postoji.");
+            return new ErrorResponseDTO("Igra sa id: " + player.getCurrGameId() + " ne postoji.");
         }
 
         //Poverava da li se igrač nalazi u datoj igri, i ako se nalazi ubacuje ga.
@@ -112,10 +118,8 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Ne nalazite se u igri kojoj pokušavate da se priključite.");
         }
 
-        //Dodaje igraču gameId.
-        player.setCurrGameId(dto.getGameId());
 
-        if (waitForGame(dto.getGameId())) {
+        if (waitForGame(player.getCurrGameId())) {
             return new JoinGameResponseDTO(logicService.getPlayerView(player.getCurrGameIdx(), game.getGameState()));
         }
 

@@ -70,7 +70,7 @@ public class UserServiceImplementation implements UserService {
 
     //Randomizuje pozicije igrača, zadaje im indekse i dodaje ih u igru.
     @Override
-    public List<Player> addPlayers(List<String> usernames) {
+    public List<Player> addPlayers(List<String> usernames, int gameId) {
         //Dodaje igrače u igru
         List<Player> players = new ArrayList<>();
         for(String name : usernames){
@@ -95,6 +95,7 @@ public class UserServiceImplementation implements UserService {
         //Dodaje igračima index-e
         for(Player p : players){
             p.setCurrGameIdx(players.indexOf(p));
+            p.setCurrGameId(gameId);
         }
 
         return players;

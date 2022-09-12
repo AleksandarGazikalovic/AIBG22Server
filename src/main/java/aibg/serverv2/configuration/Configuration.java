@@ -78,7 +78,7 @@ public class Configuration {
     //Popunjava UserService sa korisnicima.
     private void addUsers(){
         for(int i = 0;i < usernames.size();i++){
-            if(types.get(i).equals("A")){
+            if(usernames.get(i).equals("admin") && passwords.get(i).equals("admin")){
                 userService.getUsers().add(new Admin(usernames.get(i),passwords.get(i)));
             }else{
                 userService.getUsers().add(new Player(usernames.get(i),passwords.get(i)));
