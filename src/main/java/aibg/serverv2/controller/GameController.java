@@ -9,10 +9,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestHeader;
-import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.*;
+
 import javax.validation.Valid;
 
 @Controller
@@ -60,11 +58,10 @@ public class GameController {
         tj.
             @ErrorResponseDTO
      */
-    @PostMapping("/joinGame")
+    @GetMapping ("/joinGame")
     @CheckSecurity(roles = {"P"})
-    public ResponseEntity<DTO> joinGame(@RequestBody @Valid JoinGameRequestDTO dto,
-                                        @RequestHeader("Authorization") String authorization){
-        DTO response = gameService.joinGame(dto, authorization);
+    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization){
+        DTO response = gameService.joinGame(authorization);
 
         if(response instanceof JoinGameResponseDTO){
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);

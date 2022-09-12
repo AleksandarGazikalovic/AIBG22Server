@@ -7,7 +7,7 @@ public interface GameService {
     DTO createGame(CreateGameReqeustDTO dto);
 
     //Kači odredjenog igrača na odredjenu sesiju.
-    DTO joinGame(JoinGameRequestDTO dto, String token);
+    DTO joinGame(String token);
 
     //Šalje zahtev logici da izvrši akciju nad gameState-om.
     DTO doAction(DoActionRequestDTO dto, String token);
