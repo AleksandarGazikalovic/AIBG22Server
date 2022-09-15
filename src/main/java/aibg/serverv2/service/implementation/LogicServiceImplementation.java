@@ -2,6 +2,8 @@ package aibg.serverv2.service.implementation;
 
 import aibg.serverv2.configuration.Configuration;
 import aibg.serverv2.service.LogicService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.Setter;
 import org.slf4j.Logger;
@@ -23,7 +25,8 @@ import java.net.http.HttpResponse;
 @Setter
 public class LogicServiceImplementation implements LogicService {
     Logger LOG = LoggerFactory.getLogger(LogicServiceImplementation.class);
-    String logicAddress = Configuration.logicAddress;
+
+    private String requestBody;
 
     @Autowired
     public LogicServiceImplementation() {
@@ -34,12 +37,10 @@ public class LogicServiceImplementation implements LogicService {
     public String initializeGame(){
         try {
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(this.logicAddress + "/getStartGameState"))
+                    .uri(new URI(Configuration.logicAddress + "/getStartGameState"))
                     .GET()
                     .build();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            return getNewState(request);
         }catch(Exception ex){
             LOG.info("Greška u logici.");
             return null;
@@ -51,17 +52,21 @@ public class LogicServiceImplementation implements LogicService {
      */
     @Override
     public String getPlayerView(int playerIdx, String gameState) {
+
         try{
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("playerIdx", playerIdx);
+            object.put("gameState", gameState);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(this.logicAddress + "/getPlayerView"))
-                    .POST(HttpRequest.BodyPublishers.ofString( //OVDE JE FORMAT JAKO BITAN
-                            "Player:" + playerIdx + "|"        //ZBOG PARSIRANJA U LOGICI
-                            + gameState                        //Player:INT|{gameStateJSON}
-                    ))
+                    .uri(new URI(Configuration.logicAddress + "/getPlayerView"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            return getNewState(request);
         }catch(Exception ex){
             LOG.info("Greška u logici.");
             return null;
@@ -74,16 +79,18 @@ public class LogicServiceImplementation implements LogicService {
     @Override
     public String doAction(String action, String gameState) {
         try{
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("action",action);
+            object.put("gameState",gameState);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(this.logicAddress + "/doAction"))
-                    .POST(HttpRequest.BodyPublishers.ofString( //OVDE JE FORMAT JAKO BITAN
-                            "Action:" + action + "|"           //ZBOG PARSIRANJA U LOGICI
-                            + gameState                        //Action:{actionJSON}|{gameStateJSON}
-                    ))
+                    .uri(new URI(Configuration.logicAddress + "/doAction"))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            return getNewState(request);
         }catch(Exception ex){
             LOG.info("Greška u logici.");
             return null;
@@ -93,20 +100,35 @@ public class LogicServiceImplementation implements LogicService {
     @Override
     public String removePlayer(int playerIdx, String gameState) {
         try{
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("playerIdx",playerIdx);
+            object.put("gameState",gameState);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(this.logicAddress + "/removePlayer"))
-                    .POST(HttpRequest.BodyPublishers.ofString( //OVDE JE FORMAT JAKO BITAN
-                            "Player:" + playerIdx + "|"        //ZBOG PARSIRANJA U LOGICI
-                            + gameState                        //Player:INT|{GameStateJSON}
-                    ))
+                    .uri(new URI(Configuration.logicAddress + "/removePlayer"))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
-            HttpClient client = HttpClient.newHttpClient();
-            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
-            return response.body();
+            return getNewState(request);
         }catch(Exception ex){
             LOG.info("Greška u logici.");
             return null;
         }
+    }
+
+    /*Dohvata odgovarajući novi State za svaku metodu i vraća State ako nema problema,
+     a ako ima ispisuje odgovarajuću poruku
+     */
+    private String getNewState(HttpRequest request) throws java.io.IOException, InterruptedException {
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        ObjectNode node = new ObjectMapper().readValue(response.body(), ObjectNode.class);
+        if(node.get("gameState")!=null) {
+           return node.get("gameState").asText();
+        }
+        return node.get("message").asText();
     }
 
 
