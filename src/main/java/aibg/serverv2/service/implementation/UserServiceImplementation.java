@@ -94,7 +94,7 @@ public class UserServiceImplementation implements UserService {
 
         //Dodaje igračima index-e
         for(Player p : players){
-            p.setCurrGameIdx(players.indexOf(p));
+            p.setCurrGameIdx(players.indexOf(p)+1);
             p.setCurrGameId(gameId);
         }
 
