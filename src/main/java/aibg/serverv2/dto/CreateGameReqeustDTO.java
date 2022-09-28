@@ -12,7 +12,8 @@ import java.util.List;
     Telo HTTP zahteva treba da bude JSON oblika:
         {
         "gameId":INT,
-        "playerUsernames": ["player1","player2",...,"playerN"]
+        "playerUsernames": ["player1","player2",...,"playerN"],
+        "mapName": mapName
         }
  */
 @Getter
@@ -22,4 +23,5 @@ public class CreateGameReqeustDTO extends DTO{
     private int gameId;
     @NotEmpty
     private List<String> playerUsernames;
+    String mapName;
 }

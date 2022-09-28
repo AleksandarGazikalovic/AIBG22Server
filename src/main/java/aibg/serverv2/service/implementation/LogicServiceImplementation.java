@@ -34,11 +34,18 @@ public class LogicServiceImplementation implements LogicService {
 
     //Šalje zahtev logici da vrati početno stanje igre.
     @Override
-    public String initializeGame(){
+    public String initializeGame(String mapName){
         try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("mapName", mapName);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(Configuration.logicAddress + "/getStartGameState"))
-                    .GET()
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             return getNewState(request);
         }catch(Exception ex){

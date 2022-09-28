@@ -1,10 +1,8 @@
 package aibg.serverv2.service;
 
-import aibg.serverv2.domain.Player;
-
 public interface LogicService {
     //Šalje zahtev logici da pošalje početni gameState.
-    String initializeGame();
+    String initializeGame(String mapName);
 
     //Dohvata view za konkretnog igrača u momentu slanja zahteva.
     String getPlayerView(int playerIdx, String gameState);
