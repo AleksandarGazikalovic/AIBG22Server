@@ -31,7 +31,7 @@ public class GameServiceImplementation implements GameService {
     private Logger LOG = LoggerFactory.getLogger(GameService.class);
     private Map<Integer, Game> games = new HashMap<>();
     private ObjectMapper mapper = new ObjectMapper();
-    private static final long GAME_JOIN_TIMEOUT = 10000;
+    private static final long GAME_JOIN_TIMEOUT = 100000;
     private static final long MOVE_TIMEOUT = 500;
     private static final long UPDATE_TIMEOUT = 1500;
     //Autowired -- ide u konstruktor
@@ -52,16 +52,16 @@ public class GameServiceImplementation implements GameService {
          */
     @Override
     public DTO createGame(CreateGameReqeustDTO dto) {
+        //Dohvata početno stanje igre
+        String gameState = logicService.initializeGame(dto.getMapName());
+        if (gameState == null) {
+            return new ErrorResponseDTO("Greška u logici");
+        }
         Game game = new Game(dto.getGameId());
         //Proverava da li već postoji igra sa zadatim ID-om.
         if (games.containsKey(dto.getGameId())) {
             LOG.info("Igra sa gameId:" + game.getGameId() + "već postoji.");
             return new ErrorResponseDTO("Igra sa gameId:" + game.getGameId() + "već postoji.");
-        }
-        //Dohvata početno stanje igre
-        String gameState = logicService.initializeGame();
-        if (gameState == null) {
-            return new ErrorResponseDTO("Greška u logici");
         }
         game.setGameState(gameState);
 
@@ -152,10 +152,9 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Niste pristupili igri, ili pokšuvate da igrate u igri koja ne postji.");
         }
 
-        //Kreira zahtev koji logika zna da parsira.
-        String action = "{\"Player\":\"" + player.getCurrGameIdx()
-                + "\",\"Action\":\"" + dto.getAction() + "\"}|"
-                + game.getGameState();
+
+        String action = "{\"Player\":\""+player.getCurrGameIdx()+"\",\"Action\":\""
+                +dto.getAction()+"\",\"gameState\":\""+game.getGameState()+"\"}";
 
         if (waitForMyMove(player)) {
             //Dohvata broj igrača u game-u pre poteza.
@@ -263,7 +262,7 @@ public class GameServiceImplementation implements GameService {
             return false;
         }
 
-        while (game.getCurrPlayer().equals(p)) {
+        while (!game.getCurrPlayer().equals(p)) {
             try {
                 Thread.sleep(100);
             } catch (Exception ex) {

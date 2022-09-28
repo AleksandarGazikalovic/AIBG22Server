@@ -2,4 +2,4 @@ usernames: admin,player1,player2,player3,player4
 passwords: admin,player1,player2,player3,player4
 types: A,P
 noOfPlayers: 4
-logicAddress: http://ip:port/logic
+logicAddress: http://localhost:8080/logic
