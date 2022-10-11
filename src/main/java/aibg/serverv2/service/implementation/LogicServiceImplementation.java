@@ -57,6 +57,8 @@ public class LogicServiceImplementation implements LogicService {
     /*
         Šalje zahtev logici da vrati view za igrača.
      */
+
+    /*
     @Override
     public String getPlayerView(int playerIdx, String gameState) {
 
@@ -78,7 +80,7 @@ public class LogicServiceImplementation implements LogicService {
             LOG.info("Greška u logici.");
             return null;
         }
-    }
+    }*/
 
     /*
         Šalje zahtev logici da izvrši akciju i vrati potez nakon izvršavanja poteza.

@@ -120,7 +120,7 @@ public class GameServiceImplementation implements GameService {
 
 
         if (waitForGame(player.getCurrGameId())) {
-            return new JoinGameResponseDTO(logicService.getPlayerView(player.getCurrGameIdx(), game.getGameState()));
+            return new JoinGameResponseDTO(game.getGameState());
         }
 
         return new ErrorResponseDTO("Igrač timeout-ovao dok je čekao početak sesije.");
@@ -194,7 +194,7 @@ public class GameServiceImplementation implements GameService {
 
             //Čeka da igrač ponovo dodje na red, i tada mu vraća update-ovan gameState.
             if (waitForUpdate(player)) {
-                return new DoActionResponseDTO(logicService.getPlayerView(player.getCurrGameIdx(), game.getGameState()));
+                return new DoActionResponseDTO(game.getGameState());
             }else{
                 //Proverava da li je igrač izbačen u medjuvremenu, ako jeste zato nije dočekao potez.
                 if (!game.getPlayers().contains(player)) {
