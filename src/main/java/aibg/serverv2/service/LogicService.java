@@ -4,8 +4,10 @@ public interface LogicService {
     //Šalje zahtev logici da pošalje početni gameState.
     String initializeGame(String mapName);
 
+    //TODO: Ovo ce se potencijalno skroz izbacivati jer cemo kao
+    //      PlayerView vracati celu mapu
     //Dohvata view za konkretnog igrača u momentu slanja zahteva.
-    String getPlayerView(int playerIdx, String gameState);
+    /*String getPlayerView(int playerIdx, String gameState);*/
 
     //Izvršava potez igrača
     String doAction(String action, String gameState);
