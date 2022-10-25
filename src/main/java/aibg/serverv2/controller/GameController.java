@@ -38,12 +38,12 @@ public class GameController {
     @PostMapping("/createGame")
     @CheckSecurity(roles = {"A"})
     public ResponseEntity<DTO> createGame(@RequestBody @Valid CreateGameReqeustDTO dto,
-                                     @RequestHeader("Authorization") String authorization){
+                                          @RequestHeader("Authorization") String authorization) {
         DTO response = gameService.createGame(dto);
 
-        if(response instanceof CreateGameResponseDTO){
+        if (response instanceof CreateGameResponseDTO) {
             return new ResponseEntity<>(response, HttpStatus.CREATED);
-        }else{
+        } else {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
@@ -58,14 +58,14 @@ public class GameController {
         tj.
             @ErrorResponseDTO
      */
-    @GetMapping ("/joinGame")
+    @GetMapping("/joinGame")
     @CheckSecurity(roles = {"P"})
-    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization){
+    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization) {
         DTO response = gameService.joinGame(authorization);
 
-        if(response instanceof JoinGameResponseDTO){
+        if (response instanceof JoinGameResponseDTO) {
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
-        }else{
+        } else {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
@@ -83,13 +83,38 @@ public class GameController {
     @PostMapping("/doAction")
     @CheckSecurity(roles = {"P"})
     public ResponseEntity<DTO> doAction(@RequestBody @Valid DoActionRequestDTO dto,
-                                        @RequestHeader("Authorization") String authorization){
+                                        @RequestHeader("Authorization") String authorization) {
         DTO response = gameService.doAction(dto, authorization);
 
-        if(response instanceof DoActionResponseDTO){
+        if (response instanceof DoActionResponseDTO) {
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
-        }else{
+        } else {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
+
+    @PostMapping("/train")
+    public ResponseEntity<DTO> train(@RequestBody TrainPlayerRequestDTO dto,
+                                     @RequestHeader("Authorization") String authorization) {
+        DTO response = gameService.train(dto, authorization);
+
+        if (response instanceof TrainPlayerResponseDTO) {
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+        } else {
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
+    @PostMapping("/actionTrain")
+    public ResponseEntity<DTO> actionTrain(@RequestBody DoActionTrainRequestDTO dto,
+                                           @RequestHeader("Authorization") String authorization) {
+        DTO response = gameService.doActionTrain(dto, authorization);
+
+        if (response instanceof DoActionTrainResponseDTO) {
+            return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+        } else {
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
+
 }

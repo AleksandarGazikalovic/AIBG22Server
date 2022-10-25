@@ -1,8 +1,13 @@
 package aibg.serverv2.domain;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
+import net.bytebuddy.asm.Advice;
 
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -18,10 +23,23 @@ public class Game {
     private String gameState;
     private int playersJoined;
 
+    @JsonIgnore
+    private Boolean activeDoActionTrainCall;
+
+    @JsonIgnore
+    private LocalDateTime timeOfBeginning; // trenutak kada je igra kreirana
+    @JsonIgnore
+    private long minutes; // koliko vremena treba igra da traje, pocev od prvog poteza
+    @JsonIgnore
+    private Boolean firstTurn;
+
+
     public Game(int gameId) {
         this.gameId = gameId;
         this.players = new ArrayList<>();
         this.playersJoined = 0;
+        this.activeDoActionTrainCall = false;
+        this.firstTurn = true;
     }
 
     //Pomera na sledećeg igrača.
