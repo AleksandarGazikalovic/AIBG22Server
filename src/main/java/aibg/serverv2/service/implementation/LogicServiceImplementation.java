@@ -34,7 +34,7 @@ public class LogicServiceImplementation implements LogicService {
 
     //Šalje zahtev logici da vrati početno stanje igre.
     @Override
-    public String initializeGame(String mapName){
+    public String initializeGame(String mapName) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
@@ -48,8 +48,31 @@ public class LogicServiceImplementation implements LogicService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             return getNewState(request);
-        }catch(Exception ex){
+        } catch (Exception ex) {
             LOG.info("Greška u logici.");
+            return null;
+        }
+    }
+
+    @Override
+    public String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("mapName", mapName);
+            object.put("gameId", gameId);
+            object.put("playerIdx", playerIdx);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(Configuration.logicAddress + "/getStartTrainGameState"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+            return getNewState(request);
+        } catch (Exception ex) {
+            LOG.info("Greška u logici, neuspela inicijalizacija trening igre.");
             return null;
         }
     }
@@ -87,11 +110,11 @@ public class LogicServiceImplementation implements LogicService {
      */
     @Override
     public String doAction(String action, String gameState) {
-        try{
+        try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
-            object.put("action",action);
-            object.put("gameState",gameState);
+            object.put("action", action);
+            object.put("gameState", gameState);
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(object);
@@ -100,7 +123,7 @@ public class LogicServiceImplementation implements LogicService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             return getNewState(request);
-        }catch(Exception ex){
+        } catch (Exception ex) {
             LOG.info("Greška u logici.");
             return null;
         }
@@ -108,11 +131,11 @@ public class LogicServiceImplementation implements LogicService {
 
     @Override
     public String removePlayer(int playerIdx, String gameState) {
-        try{
+        try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
-            object.put("playerIdx",playerIdx);
-            object.put("gameState",gameState);
+            object.put("playerIdx", playerIdx);
+            object.put("gameState", gameState);
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(object);
@@ -121,8 +144,30 @@ public class LogicServiceImplementation implements LogicService {
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             return getNewState(request);
-        }catch(Exception ex){
+        } catch (Exception ex) {
             LOG.info("Greška u logici.");
+            return null;
+        }
+    }
+
+    @Override
+    public String trainAction(Integer gameId, String action) {
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("gameId", gameId);
+            object.put("action", action);
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(Configuration.logicAddress + "/trainAction"))
+                    .header("Content-Type", "application/json")
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+            return getNewState(request);
+        } catch (Exception ex) {
+            LOG.info("Greška u logici 1.");
             return null;
         }
     }
@@ -134,8 +179,8 @@ public class LogicServiceImplementation implements LogicService {
         HttpClient client = HttpClient.newHttpClient();
         HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
         ObjectNode node = new ObjectMapper().readValue(response.body(), ObjectNode.class);
-        if(node.get("gameState")!=null) {
-           return node.get("gameState").asText();
+        if (node.get("gameState") != null) {
+            return node.get("gameState").asText();
         }
         return node.get("message").asText();
     }

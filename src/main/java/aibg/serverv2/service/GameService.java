@@ -11,4 +11,8 @@ public interface GameService {
 
     //Šalje zahtev logici da izvrši akciju nad gameState-om.
     DTO doAction(DoActionRequestDTO dto, String token);
+
+    DTO train(TrainPlayerRequestDTO dto, String token);
+
+    DTO doActionTrain(DoActionTrainRequestDTO dto, String token);
 }
