@@ -7,5 +7,5 @@ import lombok.Setter;
 @Setter
 public class TrainPlayerRequestDTO extends DTO {
     private int playerIdx;
-    private int minutes;
+    private long time;
 }

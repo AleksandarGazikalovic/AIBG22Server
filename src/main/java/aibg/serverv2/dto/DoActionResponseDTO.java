@@ -14,8 +14,10 @@ import lombok.Setter;
 @Setter
 public class DoActionResponseDTO extends DTO {
     private String gameState;
+    private String players;
 
-    public DoActionResponseDTO(String string) {
-        this.gameState = string;
+    public DoActionResponseDTO(String gameState, String players) {
+        this.gameState = gameState;
+        this.players = players;
     }
 }

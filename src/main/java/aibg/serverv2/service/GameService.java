@@ -4,7 +4,7 @@ import aibg.serverv2.dto.*;
 
 public interface GameService {
     //Kreira novu igru na serveru
-    DTO createGame(CreateGameReqeustDTO dto);
+    DTO createGame(CreateGameRequestDTO dto);
 
     //Kači odredjenog igrača na odredjenu sesiju.
     DTO joinGame(String token);

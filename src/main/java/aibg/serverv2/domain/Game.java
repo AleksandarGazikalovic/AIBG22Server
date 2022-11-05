@@ -3,11 +3,8 @@ package aibg.serverv2.domain;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
-import net.bytebuddy.asm.Advice;
 
-import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,7 +18,9 @@ public class Game {
     private List<Player> players;
     private Player currPlayer;
     private String gameState;
+    private long time;
     private int playersJoined;
+    private boolean gameStarted = false;
 
     @JsonIgnore
     private Boolean activeDoActionTrainCall;
@@ -43,14 +42,14 @@ public class Game {
     }
 
     //Pomera na sledećeg igrača.
-    public void next(){
+    public void next() {
         int idx = players.indexOf(currPlayer);
-        this.currPlayer = players.get((idx+1)%(players.size()));
+        this.currPlayer = players.get((idx + 1) % (players.size()));
     }
 
     //Izbacuje user-a iz rotacije, ako je trenutno na potezu, pomera na sledećeg.
-    public void remove(Player player){
-        if(player.equals(currPlayer)){
+    public void remove(Player player) {
+        if (player.equals(currPlayer)) {
             next();
         }
         players.remove(player);

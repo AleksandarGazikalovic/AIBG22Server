@@ -5,11 +5,12 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class DoActionTrainResponseDTO extends DTO{
-
+public class DoActionTrainResponseDTO extends DTO {
     private String gameState;
+    private String players;
 
-    public DoActionTrainResponseDTO(String gameState) {
+    public DoActionTrainResponseDTO(String gameState, String players) {
         this.gameState = gameState;
+        this.players = players;
     }
 }

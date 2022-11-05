@@ -1,6 +1,7 @@
 package aibg.serverv2.service.implementation;
 
 import aibg.serverv2.configuration.Configuration;
+import aibg.serverv2.configuration.Timer;
 import aibg.serverv2.domain.Game;
 import aibg.serverv2.domain.Player;
 import aibg.serverv2.domain.User;
@@ -11,6 +12,7 @@ import aibg.serverv2.service.TokenService;
 import aibg.serverv2.service.UserService;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import io.jsonwebtoken.Claims;
 import lombok.Getter;
 import lombok.Setter;
@@ -19,9 +21,6 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDateTime;
-import java.time.temporal.ChronoUnit;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,17 +32,15 @@ public class GameServiceImplementation implements GameService {
     //Not autowired -- ne ide u konstruktor
     private Logger LOG = LoggerFactory.getLogger(GameService.class);
     private Map<Integer, Game> games = new HashMap<>();
-
-    //private Map<Integer, Game> trainGames = new HashMap<>();
     private ObjectMapper mapper = new ObjectMapper();
     private static final long GAME_JOIN_TIMEOUT = 100000;
-    private static final long MOVE_TIMEOUT = 500;
-    private static final long UPDATE_TIMEOUT = 1500;
-
+    private static final long MOVE_TIMEOUT = 500000; //bilo 500
+    private static final long UPDATE_TIMEOUT = 150000; //bilo 1500
     //Autowired -- ide u konstruktor
     private LogicService logicService;
     private TokenService tokenService;
     private UserService userService;
+    private Timer timer;
 
     @Autowired
     public GameServiceImplementation(LogicService logicService, TokenService tokenService, UserService userService) {
@@ -57,9 +54,9 @@ public class GameServiceImplementation implements GameService {
             i dodaje ga na listu aktivnih sesija.
          */
     @Override
-    public DTO createGame(CreateGameReqeustDTO dto) {
+    public DTO createGame(CreateGameRequestDTO dto) {
         //Dohvata početno stanje igre
-        String gameState = logicService.initializeGame(dto.getMapName());
+        String gameState = logicService.initializeGame(dto.getGameId(), dto.getMapName());
         if (gameState == null) {
             return new ErrorResponseDTO("Greška u logici");
         }
@@ -70,7 +67,9 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Igra sa gameId:" + game.getGameId() + "već postoji.");
         }
         game.setGameState(gameState);
-
+        //Postavlja vreme trajanja igre i inicijalizuje timer
+        game.setTime(dto.getTime() * 60 * 1000);
+        timer = new Timer(game);
         //Dodaje igrače u igru, postavlja im index-e.
         List<Player> players = userService.addPlayers(dto.getPlayerUsernames(), dto.getGameId());
         if (players == null) {
@@ -126,7 +125,11 @@ public class GameServiceImplementation implements GameService {
 
 
         if (waitForGame(player.getCurrGameId())) {
-            return new JoinGameResponseDTO(game.getGameState());
+            if (!game.isGameStarted()) {
+                timer.schedule(timer.task, 0, 1000);
+                game.setGameStarted(true);
+            }
+            return new JoinGameResponseDTO(player.getCurrGameIdx(), game.getGameState());
         }
 
         return new ErrorResponseDTO("Igrač timeout-ovao dok je čekao početak sesije.");
@@ -159,27 +162,32 @@ public class GameServiceImplementation implements GameService {
         }
 
 
-        String action = "{\"Player\":\"" + player.getCurrGameIdx() + "\",\"Action\":\""
-                + dto.getAction() + "\",\"gameState\":\"" + game.getGameState() + "\"}";
-
         if (waitForMyMove(player)) {
             //Dohvata broj igrača u game-u pre poteza.
             int noOfPlayers = game.getPlayers().size();
             //Postavlja nov gameState nakon izvšrenog poteza.
-            game.setGameState(logicService.doAction(action, game.getGameState()));
+            ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
+            String message = actionNode.get("message").asText();
+            String gameState = actionNode.get("gameState").asText();
+            String players = actionNode.get("players").asText();
+            game.setGameState(gameState);
+
 
             //Dohvata preostale igrače nakon poteza.
             try {
                 JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
                 //Proverava da li je postoji pobednik. TODO testirati kako se vraća null string.
+                //testirati da li je okej, vrv treba asText();
                 String winner = node.get("winner").toString();
-                if (winner != null) {
+                if (winner != null && game.getTime() == 0) {
                     //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
                     // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
                     return new GameEndResponseDTO("Igra je završena, pobednik je: " + winner + ".");
+                } else if (winner == null && game.getTime() == 0) {
+                    return new ErrorResponseDTO("Igra je završena bez pobednika.");
                 }
                 //Iz JSON-a gameState-a dohvata listu igrača i transformiše je u oblik 1,2,...,n
-                String playerIdxString = node.get("players").toString().replaceAll("^\\[|]$", "");
+                /*String playerIdxString = node.get("players").toString().replaceAll("^\\[|]$", "");
                 List<String> playersString = Arrays.asList(playerIdxString.split(","));
                 //Pretvara listu iz Stringov-a u Integer-e -- hehe ide jako funkcionalno ;)
                 List<Integer> players = playersString.stream().map(Integer::parseInt).toList();
@@ -192,7 +200,7 @@ public class GameServiceImplementation implements GameService {
                             game.remove(p);
                         }
                     }
-                }
+                }*/
             } catch (Exception ex) {
                 return new ErrorResponseDTO("Greška pri parsiranju JSON-a gameState-a.");
             }
@@ -200,9 +208,14 @@ public class GameServiceImplementation implements GameService {
             //Pomera na sledećeg igrača
             game.next();
 
+            //nzm da li ovde vratiti error poruku iz logike
+            if (!message.equals("null")) {
+                return new ErrorResponseDTO(message);
+            }
+
             //Čeka da igrač ponovo dodje na red, i tada mu vraća update-ovan gameState.
             if (waitForUpdate(player)) {
-                return new DoActionResponseDTO(game.getGameState());
+                return new DoActionResponseDTO(game.getGameState(), players);
             } else {
                 //Proverava da li je igrač izbačen u medjuvremenu, ako jeste zato nije dočekao potez.
                 if (!game.getPlayers().contains(player)) {
@@ -333,10 +346,11 @@ public class GameServiceImplementation implements GameService {
         }
         Game game = new Game(currTrainGameId);
 
-        // postavljanje trajanja kreirane igre
-        game.setMinutes(dto.getMinutes());
-
         game.setGameState(gameState);
+
+        //postavlja vreme i pravi novi tajmer
+        game.setTime(dto.getTime() * 60 * 1000);
+        timer = new Timer(game);
 
         Claims claims = tokenService.parseToken(token);
         //Dohvata usera koji je poslao zahtev.
@@ -392,7 +406,6 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Greska u train metodi, igra ne postoji.");
         }
 
-
         if (game.getActiveDoActionTrainCall()) {
             LOG.info("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
             return new ErrorResponseDTO("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
@@ -400,47 +413,40 @@ public class GameServiceImplementation implements GameService {
 
         game.setActiveDoActionTrainCall(true); // POSTAVLJANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
 
-        // postavljanje vremena pocetka igre
-        if (game.getFirstTurn()) {
-            game.setTimeOfBeginning(LocalDateTime.now());
-            game.setFirstTurn(false);
-        }
-        // azuriranje tajmera za igru i provera da li je vreme igre isteklo
-        long minutes = ChronoUnit.MINUTES.between(game.getTimeOfBeginning(), LocalDateTime.now());
-        if (minutes >= game.getMinutes()) { // vreme igre je isteklo
-            // TODO: odredi ko je pobednik, vrati to igracu ili ne, odradi sta vec treba da se odradi na kraju igre
-            // TODO: nakon sto se trening igra zavrsi da se reciklira/izbaci iz games mape!
-            game.setActiveDoActionTrainCall(false); // SKIDANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
-            return new DoActionTrainResponseDTO("Game " + game.getGameId() + " finished, time elapsed!");
+        if (!game.isGameStarted()) {
+            timer.schedule(timer.task, 0, 1000);
+            game.setGameStarted(true);
         }
 
+        try {
+            JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
+            String winner = node.get("winner").toString();
+            if (winner != null && game.getTime() == 0) {
+                //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
+                // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
+                return new GameEndResponseDTO("Trening igra je završena, pobednik je: " + winner + ".");
+            } else if (winner == null && game.getTime() == 0) {
+                return new ErrorResponseDTO("Trening igra je završena bez pobednika.");
+            }
+        } catch (Exception ex) {
+            return new ErrorResponseDTO("Greška pri parsiranju JSON-a gameState-a.");
+        }
 
         //deo za formiranje akcije
         String action = dto.getAction();
 
-        String gameState = logicService.trainAction(player.getCurrGameId(), action);
+        ObjectNode trainAction = logicService.trainAction(player.getCurrGameId(), action);
+        String message = trainAction.get("message").asText();
+        String gameState = trainAction.get("gameState").asText();
+        String players = trainAction.get("players").asText();
         game.setGameState(gameState);
 
         game.setActiveDoActionTrainCall(false); // SKIDANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
-
-        return new DoActionTrainResponseDTO(gameState);
-    }
-
-}
-/*
-
-    zahtev za pocetno stanje -> dobiju pocetno /play
-    Game = pocetno stanje
-
-    i = 0
-    while(uslov == true)
-        {
-            iz Game -> izracunaj potez
-            if i = 0
-                posalji zahtev za pocetnu
-                i++
-            zahtev za potez -> dobiju novo stanje
-            Game = novo stanje
-            continue
+        if (!message.equals("null")) {
+            return new ErrorResponseDTO(message);
         }
- */
+        return new DoActionTrainResponseDTO(game.getGameState(), players);
+    }
+    
+}
+

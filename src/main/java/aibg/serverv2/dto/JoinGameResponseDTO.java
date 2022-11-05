@@ -13,9 +13,11 @@ import lombok.Setter;
 @Getter
 @Setter
 public class JoinGameResponseDTO extends DTO {
+    private int playerIdx;
     private String gameState;
 
-    public JoinGameResponseDTO(String string) {
-        this.gameState = string;
+    public JoinGameResponseDTO(int playerIdx, String gameState) {
+        this.playerIdx = playerIdx;
+        this.gameState = gameState;
     }
 }
