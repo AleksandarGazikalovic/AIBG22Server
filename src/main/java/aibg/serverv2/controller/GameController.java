@@ -37,7 +37,7 @@ public class GameController {
      */
     @PostMapping("/createGame")
     @CheckSecurity(roles = {"A"})
-    public ResponseEntity<DTO> createGame(@RequestBody @Valid CreateGameReqeustDTO dto,
+    public ResponseEntity<DTO> createGame(@RequestBody @Valid CreateGameRequestDTO dto,
                                           @RequestHeader("Authorization") String authorization) {
         DTO response = gameService.createGame(dto);
 
@@ -58,14 +58,14 @@ public class GameController {
         tj.
             @ErrorResponseDTO
      */
-    @GetMapping("/joinGame")
+    @GetMapping ("/joinGame")
     @CheckSecurity(roles = {"P"})
-    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization) {
+    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization){
         DTO response = gameService.joinGame(authorization);
 
-        if (response instanceof JoinGameResponseDTO) {
+        if(response instanceof JoinGameResponseDTO){
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
-        } else {
+        }else{
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }

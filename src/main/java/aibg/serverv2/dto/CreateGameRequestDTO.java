@@ -18,10 +18,11 @@ import java.util.List;
  */
 @Getter
 @Setter
-public class CreateGameReqeustDTO extends DTO{
+public class CreateGameRequestDTO extends DTO {
     @NotNull
     private int gameId;
     @NotEmpty
     private List<String> playerUsernames;
-    String mapName;
+    private long time;
+    private String mapName;
 }
