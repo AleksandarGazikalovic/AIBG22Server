@@ -6,10 +6,7 @@ import aibg.serverv2.domain.Game;
 import aibg.serverv2.domain.Player;
 import aibg.serverv2.domain.User;
 import aibg.serverv2.dto.*;
-import aibg.serverv2.service.GameService;
-import aibg.serverv2.service.LogicService;
-import aibg.serverv2.service.TokenService;
-import aibg.serverv2.service.UserService;
+import aibg.serverv2.service.*;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -21,6 +18,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -40,13 +38,15 @@ public class GameServiceImplementation implements GameService {
     private LogicService logicService;
     private TokenService tokenService;
     private UserService userService;
+    private WebSocketService socketService;
     private Timer timer;
 
     @Autowired
-    public GameServiceImplementation(LogicService logicService, TokenService tokenService, UserService userService) {
+    public GameServiceImplementation(LogicService logicService, TokenService tokenService, UserService userService, WebSocketService socketService) {
         this.logicService = logicService;
         this.tokenService = tokenService;
         this.userService = userService;
+        this.socketService = socketService;
     }
 
     /*
@@ -78,6 +78,11 @@ public class GameServiceImplementation implements GameService {
         game.setPlayers(players);
         //Postavlja početnog igrača.
         game.setCurrPlayer(players.get(0));
+        try {
+            socketService.notifySubscribed(game);
+        } catch (IOException e) {
+            return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
+        }
 
         //Uspešno kreiran game, dodaje se u listu postojećih sesija, i vraća se odgovor.
         games.put(game.getGameId(), game);
@@ -162,16 +167,23 @@ public class GameServiceImplementation implements GameService {
         }
 
 
-        if (waitForMyMove(player)) {
+        if (true) {
             //Dohvata broj igrača u game-u pre poteza.
             int noOfPlayers = game.getPlayers().size();
             //Postavlja nov gameState nakon izvšrenog poteza.
             ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
-            String message = actionNode.get("message").asText();
-            String gameState = actionNode.get("gameState").asText();
-            String players = actionNode.get("players").asText();
-            game.setGameState(gameState);
-
+            String message = "null";
+            String gameState;
+            if (actionNode != null) {
+                message = actionNode.get("message").asText();
+                gameState = actionNode.get("gameState").asText();
+                game.setGameState(gameState);
+            }
+            try {
+                socketService.notifySubscribed(game);
+            } catch (IOException e) {
+                return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
+            }
 
             //Dohvata preostale igrače nakon poteza.
             try {
@@ -215,7 +227,7 @@ public class GameServiceImplementation implements GameService {
 
             //Čeka da igrač ponovo dodje na red, i tada mu vraća update-ovan gameState.
             if (waitForUpdate(player)) {
-                return new DoActionResponseDTO(game.getGameState(), players);
+                return new DoActionResponseDTO(game.getGameState());
             } else {
                 //Proverava da li je igrač izbačen u medjuvremenu, ako jeste zato nije dočekao potez.
                 if (!game.getPlayers().contains(player)) {
@@ -438,15 +450,14 @@ public class GameServiceImplementation implements GameService {
         ObjectNode trainAction = logicService.trainAction(player.getCurrGameId(), action);
         String message = trainAction.get("message").asText();
         String gameState = trainAction.get("gameState").asText();
-        String players = trainAction.get("players").asText();
         game.setGameState(gameState);
 
         game.setActiveDoActionTrainCall(false); // SKIDANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
         if (!message.equals("null")) {
             return new ErrorResponseDTO(message);
         }
-        return new DoActionTrainResponseDTO(game.getGameState(), players);
+        return new DoActionTrainResponseDTO(game.getGameState());
     }
-    
+
 }
 

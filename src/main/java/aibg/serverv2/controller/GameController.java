@@ -3,6 +3,7 @@ package aibg.serverv2.controller;
 import aibg.serverv2.dto.*;
 import aibg.serverv2.security.CheckSecurity;
 import aibg.serverv2.service.GameService;
+import aibg.serverv2.service.LogicService;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,10 +20,12 @@ import javax.validation.Valid;
 @Setter
 public class GameController {
     private GameService gameService;
+    private LogicService logicService;
 
     @Autowired
-    public GameController(GameService gameService) {
+    public GameController(GameService gameService, LogicService logicService) {
         this.gameService = gameService;
+        this.logicService = logicService;
     }
 
     /*
@@ -58,14 +61,14 @@ public class GameController {
         tj.
             @ErrorResponseDTO
      */
-    @GetMapping ("/joinGame")
+    @GetMapping("/joinGame")
     @CheckSecurity(roles = {"P"})
-    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization){
+    public ResponseEntity<DTO> joinGame(@RequestHeader("Authorization") String authorization) {
         DTO response = gameService.joinGame(authorization);
 
-        if(response instanceof JoinGameResponseDTO){
+        if (response instanceof JoinGameResponseDTO) {
             return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
-        }else{
+        } else {
             return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
         }
     }
@@ -117,4 +120,19 @@ public class GameController {
         }
     }
 
+    @GetMapping()
+
+    public ResponseEntity<DTO> watchGame(@RequestParam("gameId") Integer gameId, @RequestParam("password") String password) {
+        if (password.equalsIgnoreCase("salamala")) {
+            WatchGameResponseDTO response = new WatchGameResponseDTO(logicService.watchGame(gameId));
+
+            if (response instanceof WatchGameResponseDTO) {
+                return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
+            } else {
+                return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+            }
+        } else {
+            return null;
+        }
+    }
 }
