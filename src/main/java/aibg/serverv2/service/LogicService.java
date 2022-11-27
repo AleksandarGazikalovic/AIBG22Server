@@ -20,4 +20,6 @@ public interface LogicService {
     String removePlayer(int playerIdx, String gameState);
 
     ObjectNode trainAction(Integer gameId, String action);
+
+    String watchGame(Integer gameId);
 }

@@ -10,6 +10,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -27,7 +28,7 @@ public class WebSocketServiceImplementation implements WebSocketService {
         //Dohvata gameId date sesije
         Integer gameId = (Integer) session.getAttributes().get(WebSocketService.GAME_ID);
 
-        if(gameId == null){
+        if (gameId == null) {
             LOG.info("GameID nije postavljen uspešno za vreme povezivanja na WebSocket.");
             return false;
         }
@@ -73,7 +74,7 @@ public class WebSocketServiceImplementation implements WebSocketService {
             String message = game.getGameState();
             for (WebSocketSession ses : sessions) {
                 if (ses.isOpen()) {
-                    if (ses.getAttributes().get("password").toString().equalsIgnoreCase("sifra"))
+                    if (ses.getAttributes().get("password").toString().equalsIgnoreCase("salamala"))
                         ses.sendMessage(new TextMessage(message));
                     else
                         ses.sendMessage(new TextMessage("{\"message\" : \"Wrong password\"}"));
