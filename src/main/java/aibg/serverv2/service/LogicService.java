@@ -1,12 +1,13 @@
 package aibg.serverv2.service;
 
+import aibg.serverv2.dto.CreateGameRequestDTO;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public interface LogicService {
     //Šalje zahtev logici da pošalje početni gameState.
-    String initializeGame(int gameId, String mapName);
+    String initializeGame(CreateGameRequestDTO dto);
 
-    String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx);
+    String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx, String username);
 
     //TODO: Ovo ce se potencijalno skroz izbacivati jer cemo kao
     //      PlayerView vracati celu mapu
@@ -21,5 +22,4 @@ public interface LogicService {
 
     ObjectNode trainAction(Integer gameId, String action);
 
-    String watchGame(Integer gameId);
 }

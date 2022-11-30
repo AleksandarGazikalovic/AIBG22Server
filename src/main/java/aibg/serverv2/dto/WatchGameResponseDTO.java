@@ -7,8 +7,10 @@ import lombok.Setter;
 @Setter
 public class WatchGameResponseDTO extends DTO {
     String gameState;
+    long time;
 
-    public WatchGameResponseDTO(String gameState) {
+    public WatchGameResponseDTO(String gameState, long time) {
         this.gameState = gameState;
+        this.time = time;
     }
 }

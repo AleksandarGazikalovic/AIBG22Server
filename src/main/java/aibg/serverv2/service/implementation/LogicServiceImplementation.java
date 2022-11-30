@@ -1,6 +1,7 @@
 package aibg.serverv2.service.implementation;
 
 import aibg.serverv2.configuration.Configuration;
+import aibg.serverv2.dto.CreateGameRequestDTO;
 import aibg.serverv2.service.LogicService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
@@ -34,15 +35,12 @@ public class LogicServiceImplementation implements LogicService {
 
     //Šalje zahtev logici da vrati početno stanje igre.
     @Override
-    public String initializeGame(int gameId, String mapName) {
+    public String initializeGame(CreateGameRequestDTO dto) {
         try {
             ObjectMapper mapper = new ObjectMapper();
-            ObjectNode object = mapper.createObjectNode();
-            object.put("gameId", gameId);
-            object.put("mapName", mapName);
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(object);
+                    .writeValueAsString(dto);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(Configuration.logicAddress + "/getStartGameState"))
                     .header("Content-Type", "application/json")
@@ -56,13 +54,14 @@ public class LogicServiceImplementation implements LogicService {
     }
 
     @Override
-    public String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx) {
+    public String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx, String username) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
             object.put("mapName", mapName);
             object.put("gameId", gameId);
             object.put("playerIdx", playerIdx);
+            object.put("username", username);
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(object);
@@ -177,27 +176,6 @@ public class LogicServiceImplementation implements LogicService {
             return node;
         } catch (Exception ex) {
             LOG.info("Greška u logici 1.");
-            return null;
-        }
-    }
-
-    @Override
-    public String watchGame(Integer gameId) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode object = mapper.createObjectNode();
-            object.put("gameId", gameId);
-            String requestBody = mapper
-                    .writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(object);
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(Configuration.logicAddress + "/watchGame"))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-            return getNewState(request);
-        } catch (Exception ex) {
-            LOG.info("Greška u logici.");
             return null;
         }
     }

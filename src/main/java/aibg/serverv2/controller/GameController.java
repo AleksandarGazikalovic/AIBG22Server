@@ -121,10 +121,10 @@ public class GameController {
     }
 
     @GetMapping()
-
+    @CrossOrigin(origins = "http://localhost:1234/")
     public ResponseEntity<DTO> watchGame(@RequestParam("gameId") Integer gameId, @RequestParam("password") String password) {
         if (password.equalsIgnoreCase("salamala")) {
-            WatchGameResponseDTO response = new WatchGameResponseDTO(logicService.watchGame(gameId));
+            DTO response = gameService.watchGame(gameId);
 
             if (response instanceof WatchGameResponseDTO) {
                 return new ResponseEntity<>(response, HttpStatus.ACCEPTED);
