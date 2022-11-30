@@ -8,9 +8,11 @@ import lombok.Setter;
 public class WatchGameResponseDTO extends DTO {
     String gameState;
     long time;
+    String playerAttack;
 
-    public WatchGameResponseDTO(String gameState, long time) {
+    public WatchGameResponseDTO(String gameState, long time, String playerAttack) {
         this.gameState = gameState;
         this.time = time;
+        this.playerAttack = playerAttack;
     }
 }

@@ -174,10 +174,13 @@ public class GameServiceImplementation implements GameService {
             ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
             String message = "null";
             String gameState;
+            String playerAttack;
             if (actionNode != null) {
                 message = actionNode.get("message").asText();
                 gameState = actionNode.get("gameState").asText();
+                playerAttack = actionNode.get("playerAttack").asText();
                 game.setGameState(gameState);
+                game.setPlayerAttack(playerAttack);
             }
             try {
                 socketService.notifySubscribed(game);
@@ -461,7 +464,7 @@ public class GameServiceImplementation implements GameService {
     public DTO watchGame(int gameId) {
         Game game = games.get(gameId);
         if (game != null) {
-            return new WatchGameResponseDTO(game.getGameState(), game.getTime());
+            return new WatchGameResponseDTO(game.getGameState(), game.getTime(), game.getPlayerAttack());
         } else {
             return new ErrorResponseDTO("Greška pri gledanju partije");
         }
