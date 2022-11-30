@@ -22,5 +22,4 @@ public interface LogicService {
 
     ObjectNode trainAction(Integer gameId, String action);
 
-    String watchGame(Integer gameId);
 }

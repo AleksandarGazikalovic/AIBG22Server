@@ -56,7 +56,7 @@ public class GameServiceImplementation implements GameService {
     @Override
     public DTO createGame(CreateGameRequestDTO dto) {
         //Dohvata početno stanje igre
-        String gameState = logicService.initializeGame(dto.getGameId(), dto.getMapName());
+        String gameState = logicService.initializeGame(dto);
         if (gameState == null) {
             return new ErrorResponseDTO("Greška u logici");
         }
@@ -190,12 +190,11 @@ public class GameServiceImplementation implements GameService {
                 JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
                 //Proverava da li je postoji pobednik. TODO testirati kako se vraća null string.
                 //testirati da li je okej, vrv treba asText();
-                String winner = node.get("winner").toString();
-                if (winner != null && game.getTime() == 0) {
+                if (game.getTime() == 0) {
                     //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
                     // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-                    return new GameEndResponseDTO("Igra je završena, pobednik je: " + winner + ".");
-                } else if (winner == null && game.getTime() == 0) {
+                    return new GameEndResponseDTO("Igra je završena, pobednik je: ");
+                } else if (game.getTime() == 0) {
                     return new ErrorResponseDTO("Igra je završena bez pobednika.");
                 }
                 //Iz JSON-a gameState-a dohvata listu igrača i transformiše je u oblik 1,2,...,n
@@ -344,26 +343,6 @@ public class GameServiceImplementation implements GameService {
     @Override
     public DTO train(TrainPlayerRequestDTO dto, String token) {
 
-        int currTrainGameId = 10;
-        for (int i = 10; i < 100000; i++) {
-            if (!games.containsKey(i)) {
-                currTrainGameId = i;
-                break;
-            }
-        }
-
-        String gameState = logicService.initializeTrainGame("finalMap.txt", currTrainGameId, dto.getPlayerIdx());
-        if (gameState == null) {
-            return new ErrorResponseDTO("Greška u logici usled kreiranja train igre");
-        }
-        Game game = new Game(currTrainGameId);
-
-        game.setGameState(gameState);
-
-        //postavlja vreme i pravi novi tajmer
-        game.setTime(dto.getTime() * 60 * 1000);
-        timer = new Timer(game);
-
         Claims claims = tokenService.parseToken(token);
         //Dohvata usera koji je poslao zahtev.
         Player player = null;
@@ -376,6 +355,27 @@ public class GameServiceImplementation implements GameService {
             LOG.info("Greska u train metodi, igrač ne postoji.");
             return new ErrorResponseDTO("Greska u train metodi, igrač ne postoji.");
         }
+
+        int currTrainGameId = 10;
+        for (int i = 10; i < 100000; i++) {
+            if (!games.containsKey(i)) {
+                currTrainGameId = i;
+                break;
+            }
+        }
+
+        String gameState = logicService.initializeTrainGame("finalMap.txt", currTrainGameId, dto.getPlayerIdx(), player.getUsername());
+        if (gameState == null) {
+            return new ErrorResponseDTO("Greška u logici usled kreiranja train igre");
+        }
+        Game game = new Game(currTrainGameId);
+
+        game.setGameState(gameState);
+
+        //postavlja vreme i pravi novi tajmer
+        game.setTime(dto.getTime() * 60 * 1000);
+        timer = new Timer(game);
+
 
         //Dodaje igrača u igru, postavlja mu index.
         player.setCurrGameId(game.getGameId());
@@ -432,12 +432,11 @@ public class GameServiceImplementation implements GameService {
 
         try {
             JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
-            String winner = node.get("winner").toString();
-            if (winner != null && game.getTime() == 0) {
+            if (game.getTime() == 0) {
                 //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
                 // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-                return new GameEndResponseDTO("Trening igra je završena, pobednik je: " + winner + ".");
-            } else if (winner == null && game.getTime() == 0) {
+                return new GameEndResponseDTO("Trening igra je završena, pobednik je:");
+            } else if (game.getTime() == 0) {
                 return new ErrorResponseDTO("Trening igra je završena bez pobednika.");
             }
         } catch (Exception ex) {
@@ -458,6 +457,16 @@ public class GameServiceImplementation implements GameService {
         }
         return new DoActionTrainResponseDTO(game.getGameState());
     }
+
+    public DTO watchGame(int gameId) {
+        Game game = games.get(gameId);
+        if (game != null) {
+            return new WatchGameResponseDTO(game.getGameState(), game.getTime());
+        } else {
+            return new ErrorResponseDTO("Greška pri gledanju partije");
+        }
+    }
+
 
 }
 

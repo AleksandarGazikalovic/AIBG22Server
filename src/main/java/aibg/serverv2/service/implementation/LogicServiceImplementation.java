@@ -180,27 +180,6 @@ public class LogicServiceImplementation implements LogicService {
         }
     }
 
-    @Override
-    public String watchGame(Integer gameId) {
-        try {
-            ObjectMapper mapper = new ObjectMapper();
-            ObjectNode object = mapper.createObjectNode();
-            object.put("gameId", gameId);
-            String requestBody = mapper
-                    .writerWithDefaultPrettyPrinter()
-                    .writeValueAsString(object);
-            HttpRequest request = HttpRequest.newBuilder()
-                    .uri(new URI(Configuration.logicAddress + "/watchGame"))
-                    .header("Content-Type", "application/json")
-                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
-                    .build();
-            return getNewState(request);
-        } catch (Exception ex) {
-            LOG.info("Greška u logici.");
-            return null;
-        }
-    }
-
     /*Dohvata odgovarajući novi State za svaku metodu i vraća State ako nema problema,
      a ako ima ispisuje odgovarajuću poruku
      */
