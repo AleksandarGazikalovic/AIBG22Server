@@ -9,12 +9,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.event.ApplicationReadyEvent;
-import org.springframework.context.event.ContextRefreshedEvent;
 import org.springframework.context.event.EventListener;
 import org.springframework.stereotype.Component;
+
 import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
@@ -25,7 +25,7 @@ import java.util.List;
 public class Configuration {
     //Not Autowired -- ne idu u konstruktor
     private Logger LOG = LoggerFactory.getLogger(Configuration.class);
-    private File configFile = new File("src/main/resources/configuration");
+    private InputStream configFile = this.getClass().getResourceAsStream("/configuration");
     private List<String> usernames = new ArrayList<>();
     private List<String> passwords = new ArrayList<>();
     private List<String> types = new ArrayList<>();
@@ -41,13 +41,12 @@ public class Configuration {
 
     //Parsira konfiguracioni file
     @EventListener(ApplicationReadyEvent.class)
-    public void parse() throws Exception{
+    public void parse() throws Exception {
         //Postavka sa citanje iz file-a
-        FileReader fr = new FileReader(this.configFile);
-        BufferedReader br = new BufferedReader(fr);
+        BufferedReader br = new BufferedReader(new InputStreamReader(this.configFile));
         String line;
 
-        while((line = br.readLine()) != null) {
+        while ((line = br.readLine()) != null) {
             //Parsira liniju konfiguracionog file-a
             String[] keyValuePair = line.split(": ");
             String key = keyValuePair[0];
@@ -76,12 +75,12 @@ public class Configuration {
     }
 
     //Popunjava UserService sa korisnicima.
-    private void addUsers(){
-        for(int i = 0;i < usernames.size();i++){
-            if(usernames.get(i).equals("admin") && passwords.get(i).equals("admin")){
-                userService.getUsers().add(new Admin(usernames.get(i),passwords.get(i)));
-            }else{
-                userService.getUsers().add(new Player(usernames.get(i),passwords.get(i)));
+    private void addUsers() {
+        for (int i = 0; i < usernames.size(); i++) {
+            if (usernames.get(i).equals("admin") && passwords.get(i).equals("admin")) {
+                userService.getUsers().add(new Admin(usernames.get(i), passwords.get(i)));
+            } else {
+                userService.getUsers().add(new Player(usernames.get(i), passwords.get(i)));
             }
         }
     }
