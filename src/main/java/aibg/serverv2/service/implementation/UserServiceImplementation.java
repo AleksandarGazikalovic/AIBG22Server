@@ -18,8 +18,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
+
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 @Service
@@ -45,16 +45,16 @@ public class UserServiceImplementation implements UserService {
          */
     @Override
     public DTO login(LoginRequestDTO dto) {
-        for(User user : users){
-            if(user.getUsername().equals(dto.getUsername()) &&
-                    user.getPassword().equals(dto.getPassword())){
+        for (User user : users) {
+            if (user.getUsername().equals(dto.getUsername()) &&
+                    user.getPassword().equals(dto.getPassword())) {
                 //Generiše polja koja će se hash-irati u token.
                 Claims claims = Jwts.claims();
                 claims.put("username", dto.getUsername());
                 claims.put("password", dto.getPassword());
 
                 String token = tokenService.generate(claims);
-                if(token == null){
+                if (token == null) {
                     //Ne bi trebalo da se dešava.
                     return new ErrorResponseDTO("Token nije uspešno generisan.");
                 }
@@ -73,10 +73,10 @@ public class UserServiceImplementation implements UserService {
     public List<Player> addPlayers(List<String> usernames, int gameId) {
         //Dodaje igrače u igru
         List<Player> players = new ArrayList<>();
-        for(String name : usernames){
-            for(User u : users){
-                if(u.getUsername().equals(name)){
-                    if(u instanceof Admin){
+        for (String name : usernames) {
+            for (User u : users) {
+                if (u.getUsername().equals(name)) {
+                    if (u instanceof Admin) {
                         LOG.info("Admin ne može da učestvuje u igri.");
                         return null;
                     }
@@ -85,16 +85,14 @@ public class UserServiceImplementation implements UserService {
             }
         }
         //Ako nije nadjeno dovoljno igrača, nije dobra igra
-        if(players.size() != Configuration.noOfPlayers){
+        if (players.size() != Configuration.noOfPlayers) {
             LOG.info("Nije pronadjeno dovojno igrača.");
             return null;
         }
-        //Randomizuje igrače i dodaje ih na igru.
-        Collections.shuffle(players);
 
         //Dodaje igračima index-e
-        for(Player p : players){
-            p.setCurrGameIdx(players.indexOf(p)+1);
+        for (Player p : players) {
+            p.setCurrGameIdx(players.indexOf(p) + 1);
             p.setCurrGameId(gameId);
         }
 
