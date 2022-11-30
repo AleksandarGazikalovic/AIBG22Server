@@ -20,6 +20,7 @@ public class Game {
     private String gameState;
     private long time;
     private int playersJoined;
+    private String playerAttack;
     private boolean gameStarted = false;
 
     @JsonIgnore
