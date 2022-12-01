@@ -17,12 +17,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
-import java.util.Arrays;
-import java.util.TreeMap;
+
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.PriorityQueue;
+import java.util.TreeMap;
 
 
 @Service
@@ -32,7 +32,7 @@ public class GameServiceImplementation implements GameService {
     //Not autowired -- ne ide u konstruktor
     private Logger LOG = LoggerFactory.getLogger(GameService.class);
     private Map<Integer, Game> games = new TreeMap<>();
-    private PriorityQueue<Integer> reuseKeys= new PriorityQueue<>();
+    private PriorityQueue<Integer> reuseKeys = new PriorityQueue<>();
     private Map<Integer, Game> gamesTraining = new TreeMap<>();
     private PriorityQueue<Integer> reuseKeysTraining = new PriorityQueue<>();
     private int highestUnusedKey = 0;
@@ -63,25 +63,28 @@ public class GameServiceImplementation implements GameService {
          */
     @Override
     public DTO createGame(CreateGameRequestDTO dto) {
-        //Dohvata početno stanje igre
-        String gameState = logicService.initializeGame(dto);
-        if (gameState == null) {
-            return new ErrorResponseDTO("Greška u logici");
-        }
-        int gameID=getAvailableKey();
-
+        //Dohvata slobodan gameID i setuje ga u dto za slanje
+        int gameID = getAvailableKey();
+        dto.setGameId(gameID);
         //Proverava da li već postoji igra sa zadatim ID-om.
         if (games.containsKey(gameID)) {
             LOG.info("Igra sa gameId:" + gameID + "već postoji.");
             return new ErrorResponseDTO("Igra sa gameId:" + gameID + "već postoji.");
         }
+        //Dohvata početno stanje igre
+        String gameState = logicService.initializeGame(dto);
+        if (gameState == null) {
+            return new ErrorResponseDTO("Greška u logici");
+        }
         Game game = new Game(gameID);
         game.setGameState(gameState);
+
         //Postavlja vreme trajanja igre i inicijalizuje timer
         game.setTime(dto.getTime() * 60 * 1000);
         timer = new Timer(game, socketService);
+        
         //Dodaje igrače u igru, postavlja im index-e.
-        List<Player> players = userService.addPlayers(dto.getPlayerUsernames(),gameID);
+        List<Player> players = userService.addPlayers(dto.getPlayerUsernames(), gameID);
         if (players == null) {
             return new ErrorResponseDTO("Greška pri dodavanju igrača u igru.");
         }
@@ -410,7 +413,6 @@ public class GameServiceImplementation implements GameService {
     }
 
 
-
     // Obavlja jednu rundu igre u trening rezimu, igrac posalje potez koji zeli da odigra
     // uporedo sa jos 3 bota, svi odigraju svoje poteze i kao rezultat mu
     // se vraca gameState kada opet on dodje na red
@@ -455,11 +457,11 @@ public class GameServiceImplementation implements GameService {
         try {
             JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
             if (game.getTime() == 0) {
-            //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
-            // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-            // TODO: odredi ko je pobednik, vrati to igracu ili ne, odradi sta vec treba da se odradi na kraju igre
-            // TODO: nakon sto se trening igra zavrsi da se reciklira/izbaci iz games mape!
-            endGameTraining(player.getCurrGameId());
+                //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
+                // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
+                // TODO: odredi ko je pobednik, vrati to igracu ili ne, odradi sta vec treba da se odradi na kraju igre
+                // TODO: nakon sto se trening igra zavrsi da se reciklira/izbaci iz games mape!
+                endGameTraining(player.getCurrGameId());
                 return new GameEndResponseDTO("Trening igra je završena.");
             }
         } catch (Exception ex) {
@@ -481,29 +483,31 @@ public class GameServiceImplementation implements GameService {
         return new DoActionTrainResponseDTO(game.getGameState());
     }
 
-    private int getAvailableKey(){
-        if(reuseKeys.isEmpty()){
+    private int getAvailableKey() {
+        if (reuseKeys.isEmpty()) {
             return highestUnusedKey++;
-        }else{
+        } else {
             return reuseKeys.poll();
         }
     }
 
-    private int getAvailableKeyTrain(){
-        if(reuseKeysTraining.isEmpty()){
+    private int getAvailableKeyTrain() {
+        if (reuseKeysTraining.isEmpty()) {
             return highestUnusedKeyTraining++;
-        }else{
+        } else {
             return reuseKeysTraining.poll();
         }
     }
 
 
     //treba se pozove odakle god odlucimo da zavrsimo igru
-    /** Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1
+
+    /**
+     * Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1
      */
-    private void endGame(int gameID){
+    private void endGame(int gameID) {
         Game game = games.get(gameID);
-        for(Player player : game.getPlayers()){
+        for (Player player : game.getPlayers()) {
             player.setCurrGameId(-1);
             player.setCurrGameIdx(-1);
         }
@@ -511,12 +515,12 @@ public class GameServiceImplementation implements GameService {
         game.setPlayers(null);
         games.remove(gameID);
         reuseKeys.offer(gameID);
-        logicService.removeGame(gameID,false);
+        logicService.removeGame(gameID, false);
     }
 
-    private void endGameTraining(int gameID){
+    private void endGameTraining(int gameID) {
         Game game = gamesTraining.get(gameID);
-        for(Player player : game.getPlayers()){
+        for (Player player : game.getPlayers()) {
             player.setCurrGameId(-1);
             player.setCurrGameIdx(-1);
         }
@@ -524,8 +528,7 @@ public class GameServiceImplementation implements GameService {
         game.setPlayers(null);
         gamesTraining.remove(gameID);
         reuseKeysTraining.offer(gameID);
-        logicService.removeGame(gameID,true);
+        logicService.removeGame(gameID, true);
 
     }
-}
 }
