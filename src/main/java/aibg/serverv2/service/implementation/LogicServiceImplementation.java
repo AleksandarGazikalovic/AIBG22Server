@@ -193,4 +193,34 @@ public class LogicServiceImplementation implements LogicService {
         return node.get("message").asText();
     }
 
+    /**Salje logici zahtev da zavrsi game i obrise gameID
+     */
+    @Override
+    public boolean removeGame(int GameID, boolean training) { //trenutno se ne koristi return vrednost, moze void
+        try {
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode object = mapper.createObjectNode();
+            object.put("gameID", GameID);
+            if(training==true)
+                object.put("gameType","Training");
+            else object.put("gameType","Normal");
+
+            String requestBody = mapper
+                    .writerWithDefaultPrettyPrinter()
+                    .writeValueAsString(object);
+            HttpRequest request = HttpRequest.newBuilder()
+                    .uri(new URI(Configuration.logicAddress + "/removeGame"))
+                    .POST(HttpRequest.BodyPublishers.ofString(requestBody))
+                    .build();
+            HttpClient client = HttpClient.newHttpClient();
+            HttpResponse<String> response = client.send(request, HttpResponse.BodyHandlers.ofString());
+            ObjectNode node = new ObjectMapper().readValue(response.body(), ObjectNode.class);
+            return node.get("success").asBoolean();
+        } catch (Exception ex) {
+            LOG.info("Greška u logici, zahtevano je brisanje Game-a.");
+            return false;
+        }
+    }
+
+
 }
