@@ -69,7 +69,7 @@ public class GameServiceImplementation implements GameService {
         game.setGameState(gameState);
         //Postavlja vreme trajanja igre i inicijalizuje timer
         game.setTime(dto.getTime() * 60 * 1000);
-        timer = new Timer(game);
+        timer = new Timer(game, socketService);
         //Dodaje igrače u igru, postavlja im index-e.
         List<Player> players = userService.addPlayers(dto.getPlayerUsernames(), dto.getGameId());
         if (players == null) {
@@ -377,7 +377,7 @@ public class GameServiceImplementation implements GameService {
 
         //postavlja vreme i pravi novi tajmer
         game.setTime(dto.getTime() * 60 * 1000);
-        timer = new Timer(game);
+        timer = new Timer(game, socketService);
 
 
         //Dodaje igrača u igru, postavlja mu index.
