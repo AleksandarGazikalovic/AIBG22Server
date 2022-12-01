@@ -1,6 +1,7 @@
 package aibg.serverv2.service.implementation;
 
 import aibg.serverv2.domain.Game;
+import aibg.serverv2.dto.WebSocketComDTO;
 import aibg.serverv2.service.WebSocketService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.Getter;
@@ -71,7 +72,7 @@ public class WebSocketServiceImplementation implements WebSocketService {
         }
 
         synchronized (this) {
-            String message = game.getGameState();
+            String message = mapper.writeValueAsString(new WebSocketComDTO(game.getGameState(), game.getTime(), game.getPlayerAttack()));
             for (WebSocketSession ses : sessions) {
                 if (ses.isOpen()) {
                     if (ses.getAttributes().get("password").toString().equalsIgnoreCase("salamala"))
