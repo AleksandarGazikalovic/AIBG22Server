@@ -20,6 +20,10 @@ public interface LogicService {
     //Izbacuje direktno igrača iz gameState-a. Koristi se za izbacivanje kod timeout-a.
     String removePlayer(int playerIdx, String gameState);
 
+    String trainAction(Integer gameId, String action);
+
     ObjectNode trainAction(Integer gameId, String action);
+
+    boolean removeGame(int gameID, boolean training);
 
 }
