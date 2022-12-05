@@ -54,7 +54,7 @@ public class LogicServiceImplementation implements LogicService {
     }
 
     @Override
-    public String initializeTrainGame(String mapName, Integer gameId, Integer playerIdx, String username) {
+    public String initializeTrainGame(String mapName, int gameId, int playerIdx, String username) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
@@ -135,17 +135,18 @@ public class LogicServiceImplementation implements LogicService {
     }
 
     @Override
-    public String removePlayer(int playerIdx, String gameState) {
+    public String removePlayer(int gameId, int playerIdx) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
+            object.put("gameId", gameId);
             object.put("playerIdx", playerIdx);
-            object.put("gameState", gameState);
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
                     .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(Configuration.logicAddress + "/removePlayer"))
+                    .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             return getNewState(request);
@@ -156,7 +157,7 @@ public class LogicServiceImplementation implements LogicService {
     }
 
     @Override
-    public ObjectNode trainAction(Integer gameId, String action) {
+    public ObjectNode trainAction(int gameId, String action) {
         try {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
@@ -193,7 +194,8 @@ public class LogicServiceImplementation implements LogicService {
         return node.get("message").asText();
     }
 
-    /**Salje logici zahtev da zavrsi game i obrise gameID
+    /**
+     * Salje logici zahtev da zavrsi game i obrise gameID
      */
     @Override
     public boolean removeGame(int GameID, boolean training) { //trenutno se ne koristi return vrednost, moze void
@@ -201,9 +203,9 @@ public class LogicServiceImplementation implements LogicService {
             ObjectMapper mapper = new ObjectMapper();
             ObjectNode object = mapper.createObjectNode();
             object.put("gameID", GameID);
-            if(training==true)
-                object.put("gameType","Training");
-            else object.put("gameType","Normal");
+            if (training == true)
+                object.put("gameType", "Training");
+            else object.put("gameType", "Normal");
 
             String requestBody = mapper
                     .writerWithDefaultPrettyPrinter()
