@@ -42,7 +42,8 @@ public class GameServiceImplementation implements GameService {
     private ObjectMapper mapper = new ObjectMapper();
     private static final long GAME_JOIN_TIMEOUT = 100000;
     private static final long MOVE_TIMEOUT = 1500; //bilo 500
-    private static final long UPDATE_TIMEOUT = 4600; //bilo 1500
+    private static final long UPDATE_TIMEOUT = 3000; //bilo 1500
+    private static final long PLAYER_SLEEP_TIME = 200;
     //Autowired -- ide u konstruktor
     private LogicService logicService;
     private TokenService tokenService;
@@ -64,6 +65,18 @@ public class GameServiceImplementation implements GameService {
          */
     @Override
     public DTO createGame(CreateGameRequestDTO dto) {
+
+        // provera da li je neki od usera vec u nekom gejmu; ako jeste, ne dozvoli da se pravi gejm
+        for(String username:dto.getPlayerUsernames()){
+            for(Game g:games.values()){
+                for(Player p : g.getPlayers()){
+                    if(p.getUsername().equals(username)){
+                        return new ErrorResponseDTO("Neuspesno kreiranje igre, igrac:"+ username +" je vec u igri sa ID:" + g.getGameId());
+                    }
+                }
+            }
+        }
+
         //Dohvata slobodan gameID i setuje ga u dto za slanje
         int gameID = getAvailableKey();
         dto.setGameId(gameID);
@@ -174,89 +187,88 @@ public class GameServiceImplementation implements GameService {
         }
 
         //Dohvate igru u kojoj je igrač
-        Game game = games.get(player.getCurrGameId());      //ako je igra gotova, pokusace da dohvati ID -1 sto ne posotji i ovde ce se izaci
+        Game game = games.get(player.getCurrGameId());      //ako je igra gotova, pokusace da dohvati ID -1, pa ce biti null
         //Proverava da li je igrač pristupio igri.
         if (game == null) {
-            LOG.info("Igrač nije pristupio igri ili igra ne postoji.");
-            return new ErrorResponseDTO("Niste pristupili igri, ili pokšuvate da igrate u igri koja ne postji.");
-        }
-
-        if (player.getCurrGameIdx() != (game.getCurrPlayer().getCurrGameIdx())) {
-            return new ErrorResponseDTO("Niste na potezu");
-        }
-        //Dohvata broj igrača u game-u pre poteza.
-        int noOfPlayers = game.getPlayers().size();
-        //Postavlja nov gameState nakon izvšrenog poteza.
-        ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
-        String message = "null";
-        String gameState;
-        String playerAttack;
-        if (actionNode != null) {
-            if (actionNode.get("message") != null) {
-                message = actionNode.get("message").asText();
-            }
-            gameState = actionNode.get("gameState").asText();
-            playerAttack = actionNode.get("playerAttack").asText();
-            game.setGameState(gameState);
-            game.setPlayerAttack(playerAttack);
-        }
-        try {
-            socketService.notifySubscribed(game);
-        } catch (IOException e) {
-            return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
-        }
-
-        //Dohvata preostale igrače nakon poteza.
-        try {
-            JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
-            //Proverava da li je postoji pobednik. TODO testirati kako se vraća null string.
-            //testirati da li je okej, vrv treba asText();
-            if (game.getTime() == 0) {
-                //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
-                // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-                // zar ne treba i ovde tajmer da ide / da se proverava
-                endGame(player.getCurrGameId());
+            if(player.getCurrGameId()==-1){
+                //LOG.info("Igra je zavrsena!");
                 return new GameEndResponseDTO("Igra je završena.");
+            }else{
+                LOG.info("Igrač nije pristupio igri ili igra ne postoji.");
+                return new ErrorResponseDTO("Niste pristupili igri, ili pokšuvate da igrate u igri koja ne postoji.");
             }
-            //Iz JSON-a gameState-a dohvata listu igrača i transformiše je u oblik 1,2,...,n
-            /*String playerIdxString = node.get("players").toString().replaceAll("^\\[|]$", "");
-            List<String> playersString = Arrays.asList(playerIdxString.split(","));
-            //Pretvara listu iz Stringov-a u Integer-e -- hehe ide jako funkcionalno ;)
-            List<Integer> players = playersString.stream().map(Integer::parseInt).toList();
 
-            //Proverava da li je broj igrača isti kao u prethodnom gameState-u.
-            if (noOfPlayers != players.size()) {
-                //Ako nije, pronalazi koji igrač je ispao i izbacuje ga.
-                for (Player p : game.getPlayers()) {
-                    if (!players.contains(p.getCurrGameIdx())) {
-                        game.remove(p);
-                    }
+        }
+
+
+        synchronized (game) {
+            if (player != game.getCurrPlayer()) {
+                if (game.getCurrPlayer() == null) {
+                    return new GameEndResponseDTO("Igra je završena.");
+                } else if (game.getPlayers().size() <= 1) {   // ostao je jedan igrac, a nije pozivan endGame
+                    endGame(game.getGameId());
+                } else {
+                    return new DoActionResponseDTO(game.getGameState(),"Niste na potezu");
                 }
-            }*/
-        } catch (Exception ex) {
-            return new ErrorResponseDTO("Greška pri parsiranju JSON-a gameState-a.");
+            }
+
+
+            //Postavlja nov gameState nakon izvšrenog poteza.
+            ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
+            String message = "null";
+            String gameState;
+            String playerAttack;
+            if (actionNode != null) {
+                if (actionNode.get("message") != null) {
+                    message = actionNode.get("message").asText();
+                }
+                gameState = actionNode.get("gameState").asText();
+                playerAttack = actionNode.get("playerAttack").asText();
+                game.setGameState(gameState);
+                game.setPlayerAttack(playerAttack);
+            }
+            try {
+                socketService.notifySubscribed(game);
+            } catch (IOException e) {
+                return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
+            }
+
+            //Dohvata preostale igrače nakon poteza.
+            try {
+                JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
+                //Proverava da li je postoji pobednik. TODO testirati kako se vraća null string.
+                //testirati da li je okej, vrv treba asText();
+                if (game.getTime() == 0 || game.getPlayers().size() <= 1) {
+                    //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
+                    // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
+                    // zar ne treba i ovde tajmer da ide / da se proverava
+                    //synchronized (game) { ne mora ima okruzujuci
+                    endGame(player.getCurrGameId());
+
+                    return new GameEndResponseDTO("Igra je završena.");
+                }
+
+            } catch (Exception ex) {
+                return new ErrorResponseDTO("Greška pri parsiranju JSON-a gameState-a.");
+            }
+
+            //synchronized (game) ne mora posto vec ima okruzujuci
+            //Pomera na sledećeg igrača
+            game.next();
+
+            //nzm da li ovde vratiti error poruku iz logike
+            if (!message.equals("null")) {
+                return new ErrorResponseDTO(message);
+            }
         }
-
-        //Pomera na sledećeg igrača
-        game.next();
-
-        //nzm da li ovde vratiti error poruku iz logike
-        if (!message.equals("null")) {
-            return new ErrorResponseDTO(message);
-        }
-
         //Čeka da igrač ponovo dodje na red, i tada mu vraća update-ovan gameState.
         if (waitForUpdate(player)) {
             return new DoActionResponseDTO(game.getGameState());
         } else {
-            //Ako je i dalje u igri, a nije dočekao potez, znači da je trenutni igrač time-out-ovao.
-            //Izbacuje igrača iz gameState-a i serverske Game klase.
-            game.setGameState(logicService.removePlayer(game.getGameId(), game.getCurrPlayer().getCurrGameIdx()));
-            Player kickPlayer = game.getCurrPlayer();
-            game.next();
-            game.remove(kickPlayer);
-
-            return new DoActionResponseDTO(game.getGameState());
+            if( game.getCurrPlayer()!=null ){
+                endGame(game.getGameId());
+            }
+            return new GameEndResponseDTO("Igra je završena.");
         }
 
     }
@@ -286,7 +298,7 @@ public class GameServiceImplementation implements GameService {
 
         while (game.getPlayersJoined() != Configuration.noOfPlayers) {
             try {
-                Thread.sleep(100);
+                Thread.sleep(PLAYER_SLEEP_TIME);
             } catch (Exception ex) {
                 //Ne bi trebalo da se dešava.
                 LOG.info(ex.getMessage());
@@ -313,7 +325,7 @@ public class GameServiceImplementation implements GameService {
 
         while (!game.getCurrPlayer().equals(p)) {
             try {
-                Thread.sleep(300);
+                Thread.sleep(PLAYER_SLEEP_TIME);
             } catch (Exception ex) {
                 //Ne bi trebalo da se desi.
                 LOG.info(ex.getMessage());
@@ -327,38 +339,51 @@ public class GameServiceImplementation implements GameService {
 
         return true;
     }
-
+    /** Player is waiting for his turn; if he waits too long, he kicks out player who is currently supposed to play.
+     * @Returns False if game happends to end during this method, otherwise True */
     private boolean waitForUpdate(Player p) {
         long start = System.currentTimeMillis();
 
         //Proverava da li postoji game.
         Game game = games.get(p.getCurrGameId());
         if (game == null) {
-            //Ne bi smelo da se desi pošto se proverava null u joinGame metodi.
             return false;
         }
         int noOfPlayers = game.getPlayers().size();
-        // Trebalo bi i ovde da bude !, jer treba da ceka dok ne dodje red na njega da pokupi gameState pre svog poteza
-        while (!game.getCurrPlayer().equals(p)) {
+
+        //proveri jel game postoji
+        while (game.getCurrPlayer() != p) {
             try {
-                Thread.sleep(200);
+                Thread.sleep(PLAYER_SLEEP_TIME);
             } catch (Exception ex) {
                 //Ne bi trebalo da se desi.
                 LOG.info(ex.getMessage());
             }
-            if (System.currentTimeMillis() > start + UPDATE_TIMEOUT) {
-                // Proverava da li je neki igrač ispao u medjuvremenu i setuje novi broj igrača za proveru
-                if (noOfPlayers != game.getPlayers().size()) {
-                    start = System.currentTimeMillis() + UPDATE_TIMEOUT;
-                    noOfPlayers = game.getPlayers().size();
-                    continue;
+            synchronized (game) {
+                if(games.get(p.getCurrGameId()) == null || games.get(p.getCurrGameId()) != game || game.getPlayers().size() <= 1) //drugi uslov ipak suvisan?
+                    return false;
+                if (System.currentTimeMillis() > start + UPDATE_TIMEOUT) {
+                    // Proverava da li je neki igrač ispao u medjuvremenu i setuje novi broj igrača za proveru
+                    if (noOfPlayers != game.getPlayers().size()) {
+                        start = System.currentTimeMillis() + UPDATE_TIMEOUT;
+                        noOfPlayers = game.getPlayers().size();
+                        continue;
+                    } else {
+                        //Ako je i dalje u igri, a nije dočekao potez, znači da je trenutni igrač time-out-ovao.
+                        //Izbacuje igrača iz gameState-a i serverske Game klase.
+                        game.setGameState(logicService.removePlayer(game.getGameId(), game.getCurrPlayer().getCurrGameIdx()));
+                        Player kickPlayer = game.getCurrPlayer();
+                        game.next();
+                        game.remove(kickPlayer);
+                        if( game.getPlayers().size()<=1 )
+                            return false; //ako ostane jedan igrac igra je zavrsena
+                    }
+                    //Igrač predugo čeka na potez, dolazi do timeout-a.
+                    LOG.info("Igrač "+p.getCurrGameIdx()+" timeout-ovao");
+                    //return false;
                 }
-                //Igrač predugo čeka na potez, dolazi do timeout-a.
-                LOG.info("Igrač timeout-ovao dok je čekao početak sesije.");
-                return false;
             }
         }
-
         return true;
     }
 
@@ -477,6 +502,8 @@ public class GameServiceImplementation implements GameService {
     }
 
     private int getAvailableKey() {
+        LOG.info("Running games:"+ games.keySet()); // TODO debug log
+        LOG.info("Id u reuseID:" + reuseKeys);  // TODO debug log
         if (reuseKeys.isEmpty()) {
             return highestUnusedKey++;
         } else {
@@ -492,25 +519,32 @@ public class GameServiceImplementation implements GameService {
         }
     }
 
-
-    //treba se pozove odakle god odlucimo da zavrsimo igru
-
     /**
-     * Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1
+     * Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1; Sets currPlayer to null
+     @param training True for deleting training games, default False
      */
-    private void endGame(int gameID) {
-        Game game = games.get(gameID);
+    private void endGame(int gameID, boolean training) {
+        Game game = (training? gamesTraining: games).get(gameID);
+        if(game == null) return;
         for (Player player : game.getPlayers()) {
             player.setCurrGameId(-1);
             player.setCurrGameIdx(-1);
         }
         game.setPlayersJoined(0);
-        game.setPlayers(null);
-        games.remove(gameID);
-        reuseKeys.offer(gameID);
-        logicService.removeGame(gameID, false);
-        LOG.info("igre:" + games.keySet());
+        game.getPlayers().clear();
+        game.setCurrPlayer(null);
+        (training? gamesTraining: games).remove(gameID);
+        (training? reuseKeysTraining: reuseKeys).offer(gameID);
+        logicService.removeGame(gameID, training);
+        LOG.info("Removed " + (training? "training ": "") + "game:" + gameID + (training? "training": "")); // TODO debug log
+        LOG.info("Running " + (training? "training ": "") + "games:" + (training? gamesTraining: games).keySet()); // TODO debug log
+        //game.setTime(0);
     }
+
+    /** FOR NORMAL GAMES; Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1; Sets currPlayer to null
+     * */
+    private void endGame(int gameID) { endGame(gameID, false); }
+
 
     private void endGameTraining(int gameID) {
         Game game = gamesTraining.get(gameID);
@@ -519,10 +553,13 @@ public class GameServiceImplementation implements GameService {
             player.setCurrGameIdx(-1);
         }
         game.setPlayersJoined(0);
-        game.setPlayers(null);
+        game.getPlayers().clear();
+        game.setCurrPlayer(null);
         gamesTraining.remove(gameID);
         reuseKeysTraining.offer(gameID);
         logicService.removeGame(gameID, true);
 
     }
+
+
 }
