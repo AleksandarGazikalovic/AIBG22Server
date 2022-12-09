@@ -66,11 +66,11 @@ public class GameServiceImplementation implements GameService {
     public DTO createGame(CreateGameRequestDTO dto) {
 
         // provera da li je neki od usera vec u nekom gejmu; ako jeste, ne dozvoli da se pravi gejm
-        for(String username:dto.getPlayerUsernames()){
-            for(Game g:games.values()){
-                for(Player p : g.getPlayers()){
-                    if(p.getUsername().equals(username)){
-                        return new ErrorResponseDTO("Neuspesno kreiranje igre, igrac:"+ username +" je vec u igri sa ID:" + g.getGameId());
+        for (String username : dto.getPlayerUsernames()) {
+            for (Game g : games.values()) {
+                for (Player p : g.getPlayers()) {
+                    if (p.getUsername().equals(username)) {
+                        return new ErrorResponseDTO("Neuspesno kreiranje igre, igrac:" + username + " je vec u igri sa ID:" + g.getGameId());
                     }
                 }
             }
@@ -189,10 +189,10 @@ public class GameServiceImplementation implements GameService {
         Game game = games.get(player.getCurrGameId());      //ako je igra gotova, pokusace da dohvati ID -1, pa ce biti null
         //Proverava da li je igrač pristupio igri.
         if (game == null) {
-            if(player.getCurrGameId()==-1){
+            if (player.getCurrGameId() == -1) {
                 //LOG.info("Igra je zavrsena!");
                 return new GameEndResponseDTO("Igra je završena.");
-            }else{
+            } else {
                 LOG.info("Igrač nije pristupio igri ili igra ne postoji.");
                 return new ErrorResponseDTO("Niste pristupili igri, ili pokšuvate da igrate u igri koja ne postoji.");
             }
@@ -207,7 +207,7 @@ public class GameServiceImplementation implements GameService {
                 } else if (game.getPlayers().size() <= 1) {   // ostao je jedan igrac, a nije pozivan endGame
                     endGame(game.getGameId());
                 } else {
-                    return new DoActionResponseDTO(game.getGameState(),"Niste na potezu");
+                    return new DoActionResponseDTO(game.getGameState(), "Niste na potezu");
                 }
             }
 
@@ -261,7 +261,7 @@ public class GameServiceImplementation implements GameService {
         if (waitForUpdate(player)) {
             return new DoActionResponseDTO(game.getGameState());
         } else {
-            if( game.getCurrPlayer()!=null ){
+            if (game.getCurrPlayer() != null) {
                 endGame(game.getGameId());
             }
             return new GameEndResponseDTO("Igra je završena.");
@@ -276,7 +276,7 @@ public class GameServiceImplementation implements GameService {
             return new WatchGameResponseDTO(game.getGameState(), game.getTime(), game.getPlayerAttack());
         } else {
             game = gamesTraining.get(gameId);
-            if (game != null ) {
+            if (game != null) {
                 return new WatchGameResponseDTO(game.getGameState(), game.getTime(), game.getPlayerAttack());
             } else {
                 return new ErrorResponseDTO("Greška pri gledanju partije");
@@ -341,8 +341,12 @@ public class GameServiceImplementation implements GameService {
 
         return true;
     }
-    /** Player is waiting for his turn; if he waits too long, he kicks out player who is currently supposed to play.
-     * @Returns False if game happends to end during this method, otherwise True */
+
+    /**
+     * Player is waiting for his turn; if he waits too long, he kicks out player who is currently supposed to play.
+     *
+     * @Returns False if game happends to end during this method, otherwise True
+     */
     private boolean waitForUpdate(Player p) {
         long start = System.currentTimeMillis();
 
@@ -362,7 +366,7 @@ public class GameServiceImplementation implements GameService {
                 LOG.info(ex.getMessage());
             }
             synchronized (game) {
-                if(games.get(p.getCurrGameId()) == null || games.get(p.getCurrGameId()) != game || game.getPlayers().size() <= 1) //drugi uslov ipak suvisan?
+                if (games.get(p.getCurrGameId()) == null || games.get(p.getCurrGameId()) != game || game.getPlayers().size() <= 1) //drugi uslov ipak suvisan?
                     return false;
                 if (System.currentTimeMillis() > start + UPDATE_TIMEOUT) {
                     // Proverava da li je neki igrač ispao u medjuvremenu i setuje novi broj igrača za proveru
@@ -378,11 +382,11 @@ public class GameServiceImplementation implements GameService {
                         game.next();
                         logicService.removePlayer(kickPlayer.getCurrGameId(), kickPlayer.getCurrGameIdx());
                         game.getPlayers().remove(kickPlayer);
-                        if( game.getPlayers().size()<=1 )
+                        if (game.getPlayers().size() <= 1)
                             return false; //ako ostane jedan igrac igra je zavrsena
                     }
                     //Igrač predugo čeka na potez, dolazi do timeout-a.
-                    LOG.info("Igrač "+p.getCurrGameIdx()+" timeout-ovao");
+                    LOG.info("Igrač " + p.getCurrGameIdx() + " timeout-ovao");
                     //return false;
                 }
             }
@@ -409,7 +413,7 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Greska u train metodi, igrač ne postoji.");
         }
 
-        String gameState = logicService.initializeTrainGame("finalMap.txt", currTrainGameId, dto.getPlayerIdx(), player.getUsername());
+        String gameState = logicService.initializeTrainGame("FinalMapTopicAIBGaziBre.txt", currTrainGameId, dto.getPlayerIdx(), player.getUsername());
         if (gameState == null) {
             return new ErrorResponseDTO("Greška u logici usled kreiranja train igre");
         }
@@ -478,7 +482,7 @@ public class GameServiceImplementation implements GameService {
             game.setActiveDoActionTrainCall(true); // POSTAVLJANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
 
             if (!game.isGameStarted()) {
-                timer.schedule(timer.task, 0, 1000);
+                game.getTimer().schedule(game.getTimer().task, 0, 1000);
                 game.setGameStarted(true);
             }
         }
@@ -515,7 +519,7 @@ public class GameServiceImplementation implements GameService {
     }
 
     private int getAvailableKey() {
-        LOG.info("Running games:"+ games.keySet()); // TODO debug log
+        LOG.info("Running games:" + games.keySet()); // TODO debug log
         LOG.info("Id u reuseID:" + reuseKeys);  // TODO debug log
         if (reuseKeys.isEmpty()) {
             return highestUnusedKey++;
@@ -525,7 +529,7 @@ public class GameServiceImplementation implements GameService {
     }
 
     private int getAvailableKeyTrain() {
-        LOG.info("Running games:"+ gamesTraining.keySet()); // TODO debug log
+        LOG.info("Running games:" + gamesTraining.keySet()); // TODO debug log
         LOG.info("Id u reuseID:" + reuseKeysTraining);  // TODO debug log
         if (reuseKeysTraining.isEmpty()) {
             return highestUnusedKeyTraining++;
@@ -536,11 +540,12 @@ public class GameServiceImplementation implements GameService {
 
     /**
      * Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1; Sets currPlayer to null
-     @param training True for deleting training games, default False
+     *
+     * @param training True for deleting training games, default False
      */
-    private void endGame(int gameID, boolean training) {
-        Game game = (training? gamesTraining: games).get(gameID);
-        if(game == null) return;
+    public DTO endGame(int gameID, boolean training) {
+        Game game = (training ? gamesTraining : games).get(gameID);
+        if (game == null) return new DeleteGameResponseDTO("Ne postoji game sa Id-ijem:" + gameID);
         for (Player player : game.getPlayers()) {
             player.setCurrGameId(-1);
             player.setCurrGameIdx(-1);
@@ -548,17 +553,21 @@ public class GameServiceImplementation implements GameService {
         game.setPlayersJoined(0);
         game.getPlayers().clear();
         game.setCurrPlayer(null);
-        (training? gamesTraining: games).remove(gameID);
-        (training? reuseKeysTraining: reuseKeys).offer(gameID);
+        (training ? gamesTraining : games).remove(gameID);
+        (training ? reuseKeysTraining : reuseKeys).offer(gameID);
         logicService.removeGame(gameID, training);
-        LOG.info("Removed " + (training? "training ": "") + "game:" + gameID + (training? "training": "")); // TODO debug log
-        LOG.info("Running " + (training? "training ": "") + "games:" + (training? gamesTraining: games).keySet()); // TODO debug log
+        LOG.info("Removed " + (training ? "training " : "") + "game:" + gameID + (training ? "training" : "")); // TODO debug log
+        LOG.info("Running " + (training ? "training " : "") + "games:" + (training ? gamesTraining : games).keySet()); // TODO debug log
+        return new DeleteGameResponseDTO("Game sa Id-ijem" + gameID + "je uspešno izbrisan.");
         //game.setTime(0);
     }
 
-    /** FOR NORMAL GAMES; Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1; Sets currPlayer to null
-     * */
-    private void endGame(int gameID) { endGame(gameID, false); }
+    /**
+     * FOR NORMAL GAMES; Removes game from list of games, makes that ID available again, removes players from game and sets their gameID field to -1; Sets currPlayer to null
+     */
+    private void endGame(int gameID) {
+        endGame(gameID, false);
+    }
 
 
     private void endGameTraining(int gameID) {
