@@ -432,7 +432,7 @@ public class GameServiceImplementation implements GameService {
 
         int currTrainGameId = getAvailableKeyTrain();
 
-        String gameState = logicService.initializeTrainGame("FinalMapTopicAIBGaziBre.txt", currTrainGameId, dto.getPlayerIdx(), player.getUsername());
+        String gameState = logicService.initializeTrainGame(dto.getMapName(), currTrainGameId, dto.getPlayerIdx(), player.getUsername());
         if (gameState == null) {
             return new ErrorResponseDTO("Greška u logici usled kreiranja train igre");
         }
