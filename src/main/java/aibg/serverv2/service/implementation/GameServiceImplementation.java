@@ -49,7 +49,6 @@ public class GameServiceImplementation implements GameService {
     private TokenService tokenService;
     private UserService userService;
     private WebSocketService socketService;
-    private Timer timer;
 
     @Autowired
     public GameServiceImplementation(LogicService logicService, TokenService tokenService, UserService userService, WebSocketService socketService) {
@@ -95,7 +94,7 @@ public class GameServiceImplementation implements GameService {
 
         //Postavlja vreme trajanja igre i inicijalizuje timer
         game.setTime(dto.getTime() * 60 * 1000);
-        timer = new Timer(game, socketService);
+        game.setTimer(new Timer(game, socketService));
 
         //Dodaje igrače u igru, postavlja im index-e.
         List<Player> players = userService.addPlayers(dto.getPlayerUsernames(), gameID);
@@ -159,7 +158,7 @@ public class GameServiceImplementation implements GameService {
         // i tako zna da treba igrati, akjo u medjuvremenu salje zahteve odbacuju se
         if (waitForGame(player.getCurrGameId())) {
             if (!game.isGameStarted()) {
-                timer.schedule(timer.task, 0, 1000);
+                game.getTimer().schedule(game.getTimer().task, 0, 1000);
                 game.setGameStarted(true);
             }
             return new JoinGameResponseDTO(player.getCurrGameIdx(), game.getGameState());
@@ -420,7 +419,7 @@ public class GameServiceImplementation implements GameService {
 
         //postavlja vreme i pravi novi tajmer
         game.setTime(dto.getTime() * 60 * 1000);
-        timer = new Timer(game, socketService);
+        game.setTimer(new Timer(game, socketService));
 
 
         //Dodaje igrača u igru, postavlja mu index.
