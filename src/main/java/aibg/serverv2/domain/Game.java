@@ -49,12 +49,11 @@ public class Game {
         int idx = players.indexOf(currPlayer);
         this.currPlayer = players.get((idx + 1) % (players.size()));
     }
-
+/*
     //Izbacuje user-a iz rotacije, ako je trenutno na potezu, pomera na sledećeg.
     public void remove(Player player) {
-        if (player.equals(currPlayer)) {
-            next();
-        }
+
         players.remove(player);
     }
+    */
 }

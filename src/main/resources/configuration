@@ -1,5 +1,5 @@
-usernames: admin,player1,player2,player3,player4
-passwords: admin,player1,player2,player3,player4
+usernames: admin,player1,player2,player3,player4,player5,player6,player7,player8
+passwords: admin,player1,player2,player3,player4,player5,player6,player7,player8
 types: A,P
 noOfPlayers: 4
 logicAddress: http://localhost:8080/logic

@@ -67,10 +67,9 @@ public class WebSocketServiceImplementation implements WebSocketService {
         ObjectMapper mapper = new ObjectMapper();
 
         if (sessions == null) {
-            LOG.info("Ne postoji nijedan WebSocket povezan na ovu igru.");
+            //LOG.info("Ne postoji nijedan WebSocket povezan na ovu igru.");
             return;
         }
-
         synchronized (this) {
             String message = mapper.writeValueAsString(new WebSocketComDTO(game.getGameState(), game.getTime(), game.getPlayerAttack()));
             for (WebSocketSession ses : sessions) {

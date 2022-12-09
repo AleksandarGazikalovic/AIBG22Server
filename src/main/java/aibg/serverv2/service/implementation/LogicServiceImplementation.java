@@ -191,7 +191,9 @@ public class LogicServiceImplementation implements LogicService {
         if (node.get("gameState") != null) {
             return node.get("gameState").asText();
         }
-        return node.get("message").asText();
+        if(node.get("message") == null )
+            return node.get("message").asText();
+        return null;
     }
 
     /**
