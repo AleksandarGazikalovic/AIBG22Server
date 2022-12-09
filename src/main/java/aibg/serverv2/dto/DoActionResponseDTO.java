@@ -16,13 +16,8 @@ public class DoActionResponseDTO extends DTO {
     private String gameState;
     private String message = null;
 
-    public DoActionResponseDTO(String gameState, String message) {
-        this.gameState = gameState;
+    public DoActionResponseDTO(String message, String gameState) {
         this.message = message;
-    }
-
-    public DoActionResponseDTO(String gameState) {
         this.gameState = gameState;
     }
-
 }

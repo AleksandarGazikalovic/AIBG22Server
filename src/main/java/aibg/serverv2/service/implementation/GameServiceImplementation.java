@@ -199,7 +199,7 @@ public class GameServiceImplementation implements GameService {
 
         }
 
-
+        String message = "null";
         synchronized (game) {
             if (player != game.getCurrPlayer()) {
                 if (game.getCurrPlayer() == null) {
@@ -207,23 +207,28 @@ public class GameServiceImplementation implements GameService {
                 } else if (game.getPlayers().size() <= 1) {   // ostao je jedan igrac, a nije pozivan endGame
                     endGame(game.getGameId());
                 } else {
-                    return new DoActionResponseDTO(game.getGameState(), "Niste na potezu");
+                    return new DoActionResponseDTO("Niste na potezu", game.getGameState());
                 }
             }
 
 
             //Postavlja nov gameState nakon izvšrenog poteza.
             ObjectNode actionNode = logicService.doAction(player.getCurrGameIdx(), dto.getAction(), player.getCurrGameId());
-            String message = "null";
             String gameState;
             String playerAttack;
             if (actionNode != null) {
                 if (actionNode.get("message") != null) {
                     message = actionNode.get("message").asText();
                 }
-                gameState = actionNode.get("gameState").asText();
+                try {
+                    gameState = actionNode.get("gameState").asText();
+                    if (gameState != null) {
+                        game.setGameState(gameState);
+                    }
+                } catch (Exception e) {
+                    LOG.info("Nešto popucalo u logici pa nije vratila gameState");
+                }
                 playerAttack = actionNode.get("playerAttack").asText();
-                game.setGameState(gameState);
                 game.setPlayerAttack(playerAttack);
             }
             try {
@@ -252,14 +257,10 @@ public class GameServiceImplementation implements GameService {
             //Pomera na sledećeg igrača
             game.next();
 
-            //nzm da li ovde vratiti error poruku iz logike
-            if (!message.equals("null")) {
-                return new ErrorResponseDTO(message);
-            }
         }
         //Čeka da igrač ponovo dodje na red, i tada mu vraća update-ovan gameState.
         if (waitForUpdate(player)) {
-            return new DoActionResponseDTO(game.getGameState());
+            return new DoActionResponseDTO(message, game.getGameState());
         } else {
             if (game.getCurrPlayer() != null) {
                 endGame(game.getGameId());
@@ -399,19 +400,37 @@ public class GameServiceImplementation implements GameService {
     @Override
     public DTO train(TrainPlayerRequestDTO dto, String token) {
 
-        int currTrainGameId = getAvailableKeyTrain();
         Claims claims = tokenService.parseToken(token);
         //Dohvata usera koji je poslao zahtev.
         Player player = null;
+
         for (User u : userService.getUsers()) {
             if (u.getUsername().equals(claims.get("username"))) {
                 player = (Player) u;
+                // provera da li je neki od usera vec u nekom gejmu; ako jeste, ne dozvoli da se pravi gejm
+                for (Game g : gamesTraining.values()) {
+                    for (Player p : g.getPlayers()) {
+                        if (p.getUsername().equals(player.getUsername())) {
+                            return new ErrorResponseDTO("Neuspesno kreiranje igre, igrac:" + player.getUsername() + " je vec u igri sa ID:" + g.getGameId());
+                        }
+                    }
+                }
+
             }
         }
+
         if (player == null) { // ako je igrac poslao los token
             LOG.info("Greska u train metodi, igrač ne postoji.");
             return new ErrorResponseDTO("Greska u train metodi, igrač ne postoji.");
         }
+
+        //proverava poslato vreme trajanja partije
+        if (dto.getTime() > 10) {
+            LOG.info("Pokušano pravljenje igrice duže od 10minuta");
+            return new ErrorResponseDTO("Pokušali ste da napravite igru dužu od 10 minuta, što nije dozvoljeno.");
+        }
+
+        int currTrainGameId = getAvailableKeyTrain();
 
         String gameState = logicService.initializeTrainGame("FinalMapTopicAIBGaziBre.txt", currTrainGameId, dto.getPlayerIdx(), player.getUsername());
         if (gameState == null) {
@@ -490,7 +509,7 @@ public class GameServiceImplementation implements GameService {
         try {
             JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
             if (game.getTime() == 0) {
-                endGameTraining(player.getCurrGameId());
+                endGame(player.getCurrGameId(), true);
                 return new GameEndResponseDTO("Trening igra je završena.");
             }
         } catch (Exception ex) {
@@ -545,11 +564,12 @@ public class GameServiceImplementation implements GameService {
      */
     public DTO endGame(int gameID, boolean training) {
         Game game = (training ? gamesTraining : games).get(gameID);
-        if (game == null) return new DeleteGameResponseDTO("Ne postoji game sa Id-ijem:" + gameID);
+        if (game == null) return new DeleteGameResponseDTO("Ne postoji game sa Id-ijem: " + gameID);
         for (Player player : game.getPlayers()) {
             player.setCurrGameId(-1);
             player.setCurrGameIdx(-1);
         }
+        game.getTimer().cancel();
         game.setPlayersJoined(0);
         game.getPlayers().clear();
         game.setCurrPlayer(null);
@@ -558,7 +578,7 @@ public class GameServiceImplementation implements GameService {
         logicService.removeGame(gameID, training);
         LOG.info("Removed " + (training ? "training " : "") + "game:" + gameID + (training ? "training" : "")); // TODO debug log
         LOG.info("Running " + (training ? "training " : "") + "games:" + (training ? gamesTraining : games).keySet()); // TODO debug log
-        return new DeleteGameResponseDTO("Game sa Id-ijem" + gameID + "je uspešno izbrisan.");
+        return new DeleteGameResponseDTO("Game sa Id-ijem " + gameID + " je uspešno izbrisan.");
         //game.setTime(0);
     }
 

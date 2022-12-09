@@ -138,7 +138,7 @@ public class GameController {
 
     @PostMapping("/deleteGame")
     @CheckSecurity(roles = {"A"})
-    public ResponseEntity<DTO> createGame(@RequestBody @Valid DeleteGameRequestDTO dto,
+    public ResponseEntity<DTO> deleteGame(@RequestBody @Valid DeleteGameRequestDTO dto,
                                           @RequestHeader("Authorization") String authorization) {
         DTO response = gameService.endGame(dto.getGameId(), dto.isTraining());
 
