@@ -1,5 +1,6 @@
 package aibg.serverv2.domain;
 
+import aibg.serverv2.configuration.Timer;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Getter;
 import lombok.Setter;
@@ -18,6 +19,7 @@ public class Game {
     private List<Player> players;
     private Player currPlayer;
     private String gameState;
+    private Timer timer;
     private long time;
     private int playersJoined;
     private String playerAttack;
