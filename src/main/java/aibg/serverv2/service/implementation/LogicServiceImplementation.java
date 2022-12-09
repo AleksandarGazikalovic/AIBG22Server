@@ -212,6 +212,7 @@ public class LogicServiceImplementation implements LogicService {
                     .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(Configuration.logicAddress + "/removeGame"))
+                    .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             HttpClient client = HttpClient.newHttpClient();
