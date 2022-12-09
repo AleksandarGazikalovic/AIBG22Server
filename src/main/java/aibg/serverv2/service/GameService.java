@@ -17,4 +17,6 @@ public interface GameService {
     DTO doActionTrain(DoActionTrainRequestDTO dto, String token);
 
     DTO watchGame(int gameId);
+
+    DTO endGame(int gameID, boolean training);
 }

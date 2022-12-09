@@ -135,4 +135,17 @@ public class GameController {
             return null;
         }
     }
+
+    @PostMapping("/deleteGame")
+    @CheckSecurity(roles = {"A"})
+    public ResponseEntity<DTO> createGame(@RequestBody @Valid DeleteGameRequestDTO dto,
+                                          @RequestHeader("Authorization") String authorization) {
+        DTO response = gameService.endGame(dto.getGameId(), dto.isTraining());
+
+        if (response instanceof CreateGameResponseDTO) {
+            return new ResponseEntity<>(response, HttpStatus.CREATED);
+        } else {
+            return new ResponseEntity<>(response, HttpStatus.BAD_REQUEST);
+        }
+    }
 }
