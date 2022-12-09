@@ -191,7 +191,9 @@ public class LogicServiceImplementation implements LogicService {
         if (node.get("gameState") != null) {
             return node.get("gameState").asText();
         }
-        return node.get("message").asText();
+        if(node.get("message") == null )
+            return node.get("message").asText();
+        return null;
     }
 
     /**
@@ -212,6 +214,7 @@ public class LogicServiceImplementation implements LogicService {
                     .writeValueAsString(object);
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(new URI(Configuration.logicAddress + "/removeGame"))
+                    .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(requestBody))
                     .build();
             HttpClient client = HttpClient.newHttpClient();

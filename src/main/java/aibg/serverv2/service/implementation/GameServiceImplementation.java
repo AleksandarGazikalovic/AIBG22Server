@@ -239,9 +239,6 @@ public class GameServiceImplementation implements GameService {
                 //Proverava da li je postoji pobednik. TODO testirati kako se vraća null string.
                 //testirati da li je okej, vrv treba asText();
                 if (game.getTime() == 0 || game.getPlayers().size() <= 1) {
-                    //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
-                    // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-                    // zar ne treba i ovde tajmer da ide / da se proverava
                     //synchronized (game) { ne mora ima okruzujuci
                     endGame(player.getCurrGameId());
 
@@ -274,11 +271,17 @@ public class GameServiceImplementation implements GameService {
     }
 
     public DTO watchGame(int gameId) {
+
         Game game = games.get(gameId);
         if (game != null) {
             return new WatchGameResponseDTO(game.getGameState(), game.getTime(), game.getPlayerAttack());
         } else {
-            return new ErrorResponseDTO("Greška pri gledanju partije");
+            game = gamesTraining.get(gameId);
+            if (game != null ) {
+                return new WatchGameResponseDTO(game.getGameState(), game.getTime(), game.getPlayerAttack());
+            } else {
+                return new ErrorResponseDTO("Greška pri gledanju partije");
+            }
         }
     }
 
@@ -374,7 +377,8 @@ public class GameServiceImplementation implements GameService {
                         game.setGameState(logicService.removePlayer(game.getGameId(), game.getCurrPlayer().getCurrGameIdx()));
                         Player kickPlayer = game.getCurrPlayer();
                         game.next();
-                        game.remove(kickPlayer);
+                        logicService.removePlayer(kickPlayer.getCurrGameId(), kickPlayer.getCurrGameIdx());
+                        game.getPlayers().remove(kickPlayer);
                         if( game.getPlayers().size()<=1 )
                             return false; //ako ostane jedan igrac igra je zavrsena
                     }
@@ -422,14 +426,19 @@ public class GameServiceImplementation implements GameService {
         //Dodaje igrača u igru, postavlja mu index.
         player.setCurrGameId(game.getGameId());
         player.setCurrGameIdx(dto.getPlayerIdx());
+        game.getPlayers().add(player);
+        try {
+            socketService.notifySubscribed(game);
+        } catch (IOException e) {
+            return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
+        }
 
         //Uspešno kreiran game, dodaje se u listu postojećih sesija i vraca poruku o uspesno napravljenom game-u
         gamesTraining.put(currTrainGameId, game);
         return new TrainPlayerResponseDTO("TrainingGame sa id-ijem: " + game.getGameId() + "uspešno napravljen.");
 
-
-    }
-
+    } //TODO
+    // ZA SAD NE SALJEM SVE AKCIJE BOTA
 
     // Obavlja jednu rundu igre u trening rezimu, igrac posalje potez koji zeli da odigra
     // uporedo sa jos 3 bota, svi odigraju svoje poteze i kao rezultat mu
@@ -460,25 +469,24 @@ public class GameServiceImplementation implements GameService {
             return new ErrorResponseDTO("Greska u train metodi, igra ne postoji.");
         }
 
-        if (game.getActiveDoActionTrainCall()) {
-            LOG.info("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
-            return new ErrorResponseDTO("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
-        }
+        synchronized (game) {
+            if (game.getActiveDoActionTrainCall()) {
+                LOG.info("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
+                return new ErrorResponseDTO("Greska pri pokusaju train akcije, vec postoji aktivan poziv.");
+            }
 
-        game.setActiveDoActionTrainCall(true); // POSTAVLJANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
 
-        if (!game.isGameStarted()) {
-            timer.schedule(timer.task, 0, 1000);
-            game.setGameStarted(true);
+            game.setActiveDoActionTrainCall(true); // POSTAVLJANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
+
+            if (!game.isGameStarted()) {
+                timer.schedule(timer.task, 0, 1000);
+                game.setGameStarted(true);
+            }
         }
 
         try {
             JsonNode node = mapper.readValue(game.getGameState(), JsonNode.class);
             if (game.getTime() == 0) {
-                //TODO izbaciti igru iz mape, i izbaciti currGameId i currGameIdx iz igraca,
-                // da ne bi mogli da pristupe novoj igri sa istim Id-ijem
-                // TODO: odredi ko je pobednik, vrati to igracu ili ne, odradi sta vec treba da se odradi na kraju igre
-                // TODO: nakon sto se trening igra zavrsi da se reciklira/izbaci iz games mape!
                 endGameTraining(player.getCurrGameId());
                 return new GameEndResponseDTO("Trening igra je završena.");
             }
@@ -493,8 +501,14 @@ public class GameServiceImplementation implements GameService {
         String message = trainAction.get("message").asText();
         String gameState = trainAction.get("gameState").asText();
         game.setGameState(gameState);
-
-        game.setActiveDoActionTrainCall(false); // SKIDANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
+        try {
+            socketService.notifySubscribed(game);
+        } catch (IOException e) {
+            return new ErrorResponseDTO("Greška pri WebSocket komunikaciji");
+        }
+        synchronized (game) {
+            game.setActiveDoActionTrainCall(false); // SKIDANJE FLAG-A DA VEC POSTOJI AKTIVAN POZIV
+        }
         if (!message.equals("null")) {
             return new ErrorResponseDTO(message);
         }
@@ -512,6 +526,8 @@ public class GameServiceImplementation implements GameService {
     }
 
     private int getAvailableKeyTrain() {
+        LOG.info("Running games:"+ gamesTraining.keySet()); // TODO debug log
+        LOG.info("Id u reuseID:" + reuseKeysTraining);  // TODO debug log
         if (reuseKeysTraining.isEmpty()) {
             return highestUnusedKeyTraining++;
         } else {
